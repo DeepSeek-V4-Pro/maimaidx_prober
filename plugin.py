@@ -34,7 +34,8 @@ FS_DISPLAY: dict[str, str] = {
 _BASE_HTML_STYLE = (
     "*{margin:0;padding:0;box-sizing:border-box}"
     "body{background:linear-gradient(180deg,#1c1c30 0%,#222240 100%);"
-    "color:#d0d0dc;font-family:'Segoe UI','Microsoft YaHei',sans-serif}"
+    "color:#d0d0dc;font-family:'Segoe UI','Microsoft YaHei',sans-serif;"
+    "padding:28px 32px}"
 )
 
 
