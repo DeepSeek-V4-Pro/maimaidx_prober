@@ -1,0 +1,8 @@
+[plugin]
+enabled = true
+config_version = "1.0.0"
+
+[server]
+base_url = "https://www.diving-fish.com/api/maimaidxprober"
+request_timeout = 30
+music_cache_ttl = 300
