@@ -114,7 +114,8 @@ class AliasStore:
                 self._data[sid].append(normalized)
                 self._index[key] = sid
                 await self._save()
-            return True, "添加成功"
+                return True, "添加成功"
+            return True, "别称已存在"
 
     async def delete(self, song_id: str, alias: str) -> tuple[bool, str]:
         async with self._lock:
@@ -312,6 +313,29 @@ class DivingFishApiClient:
 class MaiMaiDXPlugin(MaiBotPlugin):
     config_model = MaiMaiDXConfig
 
+    _BLESSINGS = [
+        "出勤辛苦了…要来CAFE MiLK坐坐吗？ソルトなのです",
+        "打机加油…ソルト也会努力揉面团的なのです",
+        "今天的面包…烤得和您的手感一样好呢",
+        "推分顺利…ソルト在柜台后面偷偷看着喵",
+        "成绩不错…要奖励自己一块刚出炉的面包なのです",
+        "累了的话…ソルト这里有热牛奶和可颂",
+        "AP了呢…ソルト开心得尾巴都翘起来了",
+        "紫谱也好红谱也好…都比不上刚烤好的吐司香なのです",
+        "出勤完毕…来CAFE MiLK享受安静的午后吧",
+        "金框闪闪…比ソルト烤的焦糖面包还亮呢",
+        "每次打机回来…ソルト都会准备好热茶等您",
+        "分数不重要…开心才重要…ソルト是这样想的なのです",
+        "今天也辛苦了…ソルト给您留了限定草莓蛋糕",
+        "手感不好也没关系…休息一下再来…ソルト陪你",
+        "看到您努力推分…ソルト揉面团的力气也更大了",
+        "选曲品味真好…ソルト也喜欢这首的旋律喵",
+        "夜深了…打完这局要来一块宵夜面包吗",
+        "绝赞全中的感觉…就像面包刚出炉那一刻なのです",
+        "ソルト虽然胆小…但看到您的成绩也忍不住鼓掌了",
+        "午睡醒来…发现您还在出勤…ソルト给您续杯",
+    ]
+
     async def on_load(self) -> None:
         self._http_session: Optional[aiohttp.ClientSession] = None
         self._api_client: Optional[DivingFishApiClient] = None
@@ -452,12 +476,15 @@ class MaiMaiDXPlugin(MaiBotPlugin):
         if not uid:
             msg = kwargs.get("message")
             if isinstance(msg, dict):
-                uid = str(
-                    msg.get("message_info", {})
-                    .get("user_info", {})
-                    .get("user_id", "")
-                    or ""
-                )
+                try:
+                    uid = str(
+                        msg.get("message_info", {})
+                        .get("user_info", {})
+                        .get("user_id", "")
+                        or ""
+                    )
+                except AttributeError:
+                    pass
         return uid
 
     async def _get_binding(self, kwargs: dict) -> Optional[dict[str, Any]]:
@@ -599,6 +626,7 @@ class MaiMaiDXPlugin(MaiBotPlugin):
         html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 {_BASE_HTML_STYLE}
+body{{padding:28px 32px 14px 32px}}
 .header{{margin-bottom:24px}}
 .header .type-badge{{font-size:13px;color:#8888b0;margin-right:10px;vertical-align:middle}}
 .header .title{{font-size:22px;color:#e8e8f0;font-weight:600;vertical-align:middle;letter-spacing:1px}}
@@ -622,15 +650,16 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 <div class="info">
 <div class="row"><span class="label">作者</span>{_html.escape(artist)}</div>
 <div class="row"><span class="label">版本</span>{_html.escape(version)}</div>
-<div class="row"><span class="label">BPM</span>{bpm}</div>
+<div class="row"><span class="label">BPM</span>{_html.escape(str(bpm))}</div>
 <div class="row"><span class="label">风格</span>{_html.escape(genre)}</div>
 <div class="ds">定数: {ds_str}</div>
 </div>
 </div>
 <div class="aliases">别称: {_html.escape(alias_text)}</div>
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
 </body></html>"""
 
-        return await self._render_html_to_png(html, width=680, height=500, wait_for_images=True)
+        return await self._render_html_to_png(html, width=680, height=100, wait_for_images=True)
 
     async def _render_my_image(
         self, username: str, nickname: str, rating: int,
@@ -732,76 +761,10 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 <tr><th>#</th><th>曲目</th><th>难度</th><th>达成率</th><th>RA</th></tr>
 {top_rows}
 </table>
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
 </body></html>"""
 
         return await self._render_html_to_png(html, width=680, height=600)
-
-    async def _render_help_image(self) -> str:
-        sections = [
-            ("查询",
-             [("/mai b50 [用户]", "生成 Best 50 成绩图片"),
-              ("/mai song <关键词>", "搜索曲目，ID 直接查看详情"),
-              ("/mai my", "查看个人成绩摘要 (需绑定)")]),
-            ("娱乐",
-             [("/mai today", "今日运势 — 查看宜忌与推荐歌曲"),
-               ("/mai maidle", "猜歌游戏 (Maidle)"),
-               ("/mai maidle help", "Maidle 猜歌游戏说明")]),
-            ("统计",
-             [("/mai charts", "全谱面难度分布统计"),
-               ("/mai status", "diving-fish 服务器状态")]),
-            ("管理",
-             [("/mai bind <Token>", "绑定水鱼查分器的成绩导入 Token"),
-               ("/mai unbind", "解除账号绑定")]),
-            ("别称",
-             [("/mai alias add <ID> <名称>", "为歌曲添加本地别称"),
-               ("/mai alias del <ID> <名称>", "删除歌曲别称"),
-               ("/mai alias list <ID>", "查看歌曲所有别称")]),
-        ]
-
-        sec_html_parts = []
-        for label, cmds in sections:
-            items = "".join(
-                f'<div class="cmd"><span class="cmd-name">{_html.escape(c[0])}</span><span class="cmd-desc">{_html.escape(c[1])}</span></div>'
-                for c in cmds
-            )
-            sec_html_parts.append(
-                f'<div class="section"><div class="sec-label">{_html.escape(label)}</div>{items}</div>'
-            )
-
-        html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-{_BASE_HTML_STYLE}
-.header{{text-align:center;margin-bottom:26px}}
-.header h2{{font-size:22px;color:#e8e8f0;letter-spacing:2px;margin-bottom:4px}}
-.header .sub{{font-size:13px;color:#7878a8}}
-.section{{margin-bottom:18px}}
-.sec-label{{font-size:15px;color:#c0c0d8;font-weight:600;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #2e2e48}}
-.cmd{{display:flex;padding:4px 0}}
-.cmd-name{{flex-shrink:0;width:210px;font-size:14px;color:#5b8fd4;font-family:'Consolas','Courier New',monospace}}
-.cmd-desc{{font-size:14px;color:#9090b8}}
-</style></head>
-<body>
-<div class="header">
-<h2>MaiMai DX 查分器</h2>
-<div class="sub">命令帮助 — 所有命令以 /mai 开头</div>
-</div>
-{''.join(sec_html_parts)}
-</body></html>"""
-
-        return await self._render_html_to_png(html, width=620, height=500)
-
-    def _format_music_summary(self, music: dict) -> str:
-        sid = str(music.get("id", "") or "?")
-        title = str(music.get("title", "") or "?")
-        tp = str(music.get("type", "") or "?")
-        bi = music.get("basic_info", {})
-        artist = str(bi.get("artist", "") or "?") if isinstance(bi, dict) else "?"
-        version = str(bi.get("from", "") or "?") if isinstance(bi, dict) else "?"
-        ds_list = music.get("ds", [])
-        max_ds = max(ds_list) if ds_list else 0
-        return f"[{tp}] {title} — {artist}  |  ID: {sid}  |  {version}  |  定数: {max_ds}"
-
-    # ---- 今日运势 ----
 
     @staticmethod
     def _get_cover_url(song_id: str) -> str:
@@ -894,12 +857,12 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 <div class="sep"></div>
 <div class="clues">{_html.escape(clues)}</div>
 <div class="tips">继续: /mai maidle guess &lt;ID&gt;  |  放弃: /mai maidle answer</div>
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
 </body></html>"""
         return await self._render_html_to_png(html, width=480, height=400)
 
     async def _render_maidle_answer_image(self, title: str, artist: str,
                                           sid: str, cover_b64: str) -> str:
-        width_val = 560 if cover_b64 else 400
         cover_html = (
             f'<div class="cover"><img src="data:image/png;base64,{cover_b64}" /></div>'
             if cover_b64 else ""
@@ -929,14 +892,83 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 </div>
 </div>
 <div class="footer">使用 /mai maidle 开始新游戏</div>
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
 </body></html>"""
         return await self._render_html_to_png(
             html, width=560, height=350,
             wait_for_images=bool(cover_b64),
         )
 
+    def _format_music_summary(self, music: dict) -> str:
+        sid = str(music.get("id", "") or "?")
+        title = str(music.get("title", "") or "?")
+        tp = str(music.get("type", "") or "?")
+        bi = music.get("basic_info", {})
+        artist = str(bi.get("artist", "") or "?") if isinstance(bi, dict) else "?"
+        version = str(bi.get("from", "") or "?") if isinstance(bi, dict) else "?"
+        ds_list = music.get("ds", [])
+        max_ds = max(ds_list) if ds_list else 0
+        return f"[{tp}] {title} — {artist}  |  ID: {sid}  |  {version}  |  定数: {max_ds}"
+
+    async def _render_help_image(self) -> str:
+        sections = [
+            ("查询",
+             [("/mai b50 [用户]", "生成 Best 50 成绩图片"),
+              ("/mai song <关键词>", "搜索曲目，ID 直接查看详情"),
+              ("/mai my", "查看个人成绩摘要 (需绑定)")]),
+            ("娱乐",
+             [("/mai today", "今日运势 — 查看宜忌与推荐歌曲"),
+               ("/mai maidle", "猜歌游戏 (Maidle)"),
+               ("/mai maidle help", "Maidle 猜歌游戏说明")]),
+            ("统计",
+             [("/mai charts", "全谱面难度分布统计"),
+               ("/mai status", "diving-fish 服务器状态")]),
+            ("管理",
+             [("/mai bind <Token>", "绑定水鱼查分器的成绩导入 Token"),
+               ("/mai unbind", "解除账号绑定")]),
+            ("别称",
+             [("/mai alias add <ID> <名称>", "为歌曲添加本地别称"),
+               ("/mai alias del <ID> <名称>", "删除歌曲别称"),
+               ("/mai alias list <ID>", "查看歌曲所有别称")]),
+        ]
+
+        sec_html_parts = []
+        for label, cmds in sections:
+            items = "".join(
+                f'<div class="cmd"><span class="cmd-name">{_html.escape(c[0])}</span><span class="cmd-desc">{_html.escape(c[1])}</span></div>'
+                for c in cmds
+            )
+            sec_html_parts.append(
+                f'<div class="section"><div class="sec-label">{_html.escape(label)}</div>{items}</div>'
+            )
+
+        html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+{_BASE_HTML_STYLE}
+body{{padding:36px 48px}}
+.header{{text-align:center;margin-bottom:44px}}
+.header h2{{font-size:46px;color:#e8e8f0;letter-spacing:5px;margin-bottom:10px}}
+.header .sub{{font-size:20px;color:#7878a8}}
+.section{{margin-bottom:32px}}
+.sec-label{{font-size:30px;color:#c0c0d8;font-weight:600;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #2e2e48}}
+.cmd{{display:flex;padding:10px 0}}
+.cmd-name{{flex-shrink:0;width:400px;font-size:26px;color:#5b8fd4;font-family:'Consolas','Courier New',monospace}}
+.cmd-desc{{font-size:26px;color:#9090b8}}
+</style></head>
+<body>
+<div class="header">
+<h2>MaiMai DX 查分器</h2>
+<div class="sub">命令帮助 — 所有命令以 /mai 开头</div>
+</div>
+{''.join(sec_html_parts)}
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
+</body></html>"""
+
+        return await self._render_html_to_png(html, width=1060, height=760)
+
     async def _render_b50_image(
-        self, charts: dict, username: str, nickname: str, rating: int
+        self, charts: dict, username: str, nickname: str, rating: int,
+        query_time: str = "", blessing: str = "",
     ) -> str:
         sd = charts.get("sd", [])
         dx = charts.get("dx", [])
@@ -972,15 +1004,22 @@ class MaiMaiDXPlugin(MaiBotPlugin):
                 cover_url = self._get_cover_url(str(song_id))
                 parts.append(
                     f'<div class="card" style="border-left-color:{border_color};background:{bg_color}">'
+                    f'<div class="tl">'
                     f'<div class="rank">#{i + 1}</div>'
-                    f'<div class="title" title="{_html.escape(str(title), True)}">{_html.escape(str(title))}</div>'
-                    f'<span class="type-badge">{_html.escape(str(tp))}</span>'
-                    f'<span class="level">Lv.{_html.escape(str(level))}</span>'
-                    f'<div class="achievements">{achievements:.4f}%</div>'
-                    f'<div class="ra">RA: {ra_val}</div>'
+                    f'<div class="type-badge">{_html.escape(str(tp))}</div>'
+                    f'<div class="level">Lv.{_html.escape(str(level))}</div>'
+                    f'</div>'
+                    f'<div class="tr">'
+                    f'<div class="title">{_html.escape(str(title))}</div>'
+                    f'<div class="achievements">{achievements:.4f}</div>'
+                    f'</div>'
+                    f'<div class="bl">'
+                    f'<div class="ra">RA:{ra_val}</div>'
                     f'<div class="meta">{_html.escape(rate)} | {_html.escape(fc)} | DS:{ds_val}</div>'
-                    f'<img class="cover" src="{cover_url}" '
-                    f'onerror="this.style.display=\'none\'" loading="lazy" />'
+                    f'</div>'
+                    f'<div class="br">'
+                    f'<img class="cover" src="{cover_url}" onerror="this.style.display=\'none\'" />'
+                    f'</div>'
                     f'</div>'
                 )
             parts.append("</div>")
@@ -989,21 +1028,30 @@ class MaiMaiDXPlugin(MaiBotPlugin):
         html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 {_BASE_HTML_STYLE}
-.header{{text-align:center;margin-bottom:30px}}
-.header h2{{font-size:32px;color:#e8e8f0;margin-bottom:6px;letter-spacing:2px}}
-.header .sub{{font-size:16px;color:#8888a8}}
-.header .total{{font-size:24px;color:#f0c060;margin-top:8px;font-weight:600}}
-.section-title{{font-size:22px;color:#d0d0e0;margin:24px 0 14px;padding-bottom:6px;border-bottom:1px solid #333350}}
-.grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}}
-.card{{position:relative;border-radius:10px;padding:18px 18px 112px 18px;border-left:4px solid #555;display:flex;flex-direction:column;gap:4px;min-height:230px;box-shadow:0 2px 8px rgba(0,0,0,.3)}}
-.card .rank{{font-size:13px;color:#6868a0}}
-.card .title{{font-size:16px;color:#e4e4f0;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}}
-.card .cover{{position:absolute;bottom:8px;right:8px;width:128px;height:128px;border-radius:6px;object-fit:cover;opacity:0.92;box-shadow:0 2px 6px rgba(0,0,0,.4)}}
-.card .type-badge{{font-size:11px;color:#8888b0;display:inline-block;width:fit-content}}
-.card .level{{font-size:14px;color:#9090b8}}
-.card .achievements{{font-size:22px;color:#f0d060;font-weight:700}}
-.card .ra{{font-size:16px;color:#c0c0d4}}
-.card .meta{{font-size:12px;color:#7878a0}}
+body{{padding:36px 48px 18px 48px}}
+.header{{text-align:center;margin-bottom:40px}}
+.header h2{{font-size:44px;color:#e8e8f0;margin-bottom:6px;letter-spacing:3px}}
+.header .sub{{font-size:20px;color:#8888a8}}
+.header .total{{font-size:32px;color:#f0c060;margin-top:10px;font-weight:600}}
+.section-title{{font-size:28px;color:#d0d0e0;margin:30px 0 18px;padding-bottom:8px;border-bottom:1px solid #333350}}
+.grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:18px}}
+.card{{display:grid;grid-template-columns:105px 1fr;grid-template-rows:auto auto;gap:6px 8px;padding:14px 16px 14px 14px;border-radius:10px;border-left:5px solid;min-height:280px;box-shadow:0 2px 8px rgba(0,0,0,.3)}}
+.tl{{display:flex;flex-direction:column;gap:3px;align-items:flex-start}}
+.tr{{display:flex;flex-direction:column;gap:6px;overflow:hidden;padding-right:2px}}
+.bl{{display:flex;flex-direction:column;gap:4px;justify-content:center}}
+.br{{display:flex;align-items:center;justify-content:center}}
+.rank{{font-size:21px;color:#6868a0}}
+.title{{font-size:22px;color:#e4e4f0;font-weight:600;min-height:60px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word}}
+.cover{{width:130px;height:130px;border-radius:6px;object-fit:cover;opacity:0.92;box-shadow:0 2px 6px rgba(0,0,0,.4)}}
+.type-badge{{font-size:17px;color:#8888b0}}
+.level{{font-size:21px;color:#9090b8}}
+.achievements{{font-size:28px;color:#f0d060;font-weight:700}}
+.ra{{font-size:25px;color:#c0c0d4}}
+.meta{{font-size:19px;color:#7878a0}}
+.footer-bar{{display:flex;align-items:center;margin-top:44px;padding-top:18px;border-top:1px solid #333350;font-size:20px}}
+.footer-time{{color:#7878a8;flex:1;text-align:left}}
+.mai-bot{{font-size:13px;color:#585878;flex:1;text-align:center}}
+.blessing{{color:#c0c0d8;flex:1;text-align:right}}
 </style></head>
 <body>
 <div class="header">
@@ -1013,14 +1061,22 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 </div>
 {_cards_html(sd, "B35 / 旧曲")}
 {_cards_html(dx, "B15 / 新曲")}
+<div class="footer-bar">
+<span class="footer-time">查询时间: {_html.escape(query_time)}</span>
+<span class="mai-bot">MaiBot</span>
+<span class="blessing">{_html.escape(blessing)}</span>
+</div>
 </body></html>"""
 
-        rows = max(len(sd), len(dx))
-        card_h = 310
-        header_h = 120
-        section_h = 56
-        padding = 50
-        height = header_h + section_h * 2 + (rows + 4) // 5 * (card_h + 50) + padding * 2 + 120
+        sd_rows = (len(sd) + 4) // 5 if sd else 0
+        dx_rows = (len(dx) + 4) // 5 if dx else 0
+        total_rows = sd_rows + dx_rows
+        card_h = 280
+        header_h = 175
+        section_h = 55
+        row_gap = 18
+        pad = 36
+        height = header_h + section_h * 2 + total_rows * card_h + (total_rows - 2) * row_gap + pad * 2 + 100
 
         return await self._render_html_to_png(
             html, width=1600, height=height, wait_for_images=True, image_timeout=30000,
@@ -1030,7 +1086,7 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 
     async def _render_today_image(
         self, rp: int, yi_parts: list[str], ji_parts: list[str],
-        music: dict, cover_b64: str,
+        music: dict, cover_b64: str, blessing: str = "",
     ) -> str:
         title = str(music.get("title", "") or "???")
         sid = str(music.get("id", "") or "???")
@@ -1050,22 +1106,23 @@ class MaiMaiDXPlugin(MaiBotPlugin):
         html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 {_BASE_HTML_STYLE}
-.header{{text-align:center;margin-bottom:28px}}
-.header h2{{font-size:24px;color:#d0d0e0;margin-bottom:10px;letter-spacing:2px}}
-.header .rp{{font-size:48px;font-weight:700;color:{rp_color}}}
-.section{{margin:20px 0}}
-.section .label{{font-size:14px;color:#8888a8;margin-bottom:4px}}
-.section .value{{font-size:15px;color:#c8c8d8}}
-.sep{{border-top:1px solid #333350;margin:24px 0}}
-.rec{{display:flex;gap:24px;align-items:flex-start}}
-.rec .cover{{flex-shrink:0;width:180px;height:180px;border-radius:10px;overflow:hidden;border:2px solid #444460;box-shadow:0 2px 8px rgba(0,0,0,.3)}}
+body{{padding:36px 48px}}
+.header{{text-align:center;margin-bottom:40px}}
+.header h2{{font-size:36px;color:#d0d0e0;margin-bottom:14px;letter-spacing:3px}}
+.header .rp{{font-size:64px;font-weight:700;color:{rp_color}}}
+.section{{margin:28px 0}}
+.section .label{{font-size:20px;color:#8888a8;margin-bottom:6px}}
+.section .value{{font-size:22px;color:#c8c8d8}}
+.sep{{border-top:1px solid #333350;margin:32px 0}}
+.rec{{display:flex;gap:32px;align-items:flex-start}}
+.rec .cover{{flex-shrink:0;width:220px;height:220px;border-radius:10px;overflow:hidden;border:2px solid #444460;box-shadow:0 2px 8px rgba(0,0,0,.3)}}
 .rec .cover img{{width:100%;height:100%;object-fit:cover}}
-.rec .info{{flex:1;display:flex;flex-direction:column;gap:8px;padding-top:4px}}
-.rec .info .song{{font-size:18px;color:#e4e4f0;font-weight:600}}
-.rec .info .artist{{font-size:14px;color:#a0a0c0}}
-.rec .info .type-badge{{font-size:11px;color:#8888b0;width:fit-content}}
-.rec .info .ds{{font-size:13px;color:#8080a8}}
-.footer{{margin-top:24px;text-align:center;font-size:13px;color:#6868a0}}
+.rec .info{{flex:1;display:flex;flex-direction:column;gap:12px;padding-top:6px}}
+.rec .info .song{{font-size:26px;color:#e4e4f0;font-weight:600}}
+.rec .info .artist{{font-size:20px;color:#a0a0c0}}
+.rec .info .type-badge{{font-size:15px;color:#8888b0;width:fit-content}}
+.rec .info .ds{{font-size:18px;color:#8080a8}}
+.footer{{margin-top:34px;text-align:center;font-size:17px;color:#6868a0}}
 </style></head>
 <body>
 <div class="header">
@@ -1086,22 +1143,23 @@ class MaiMaiDXPlugin(MaiBotPlugin):
 <div class="artist">{_html.escape(artist)}</div>
 <div><span class="type-badge">{_html.escape(tp)}</span></div>
 <div class="ds">定数: {ds_str}</div>
-<div style="font-size:12px;color:#6868a0">ID: {_html.escape(sid)}</div>
+<div style="font-size:15px;color:#6868a0">ID: {_html.escape(sid)}</div>
 </div>
 </div>
-<div class="footer">MaiBot提醒您：打机时不要大力拍打或滑动哦</div>
+<div class="footer">{_html.escape(blessing)}</div>
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
 </body></html>"""
 
         return await self._render_html_to_png(
-            html, width=680, height=600, wait_for_images=True,
+            html, width=880, height=760, wait_for_images=True,
         )
 
     async def _render_maidle_help_image(self) -> str:
-        html = """<!DOCTYPE html>
+        html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:linear-gradient(180deg,#1c1c30 0%,#222240 100%);color:#d0d0dc;font-family:'Segoe UI','Microsoft YaHei',sans-serif;width:520px;padding:32px}
-h2{font-size:20px;color:#e8e8f0;text-align:center;letter-spacing:2px;margin-bottom:16px}
+{_BASE_HTML_STYLE}
+body{{width:520px;padding:32px}}
+h2{{font-size:20px;color:#e8e8f0;text-align:center;letter-spacing:2px;margin-bottom:16px}}
 p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .legend span{font-size:13px;background:#24243a;padding:3px 10px;border-radius:4px;color:#c8c8d8}
@@ -1124,6 +1182,7 @@ p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
 提交猜测: /mai maidle guess &lt;歌曲ID&gt;<br/>
 查看答案: /mai maidle answer
 </div>
+<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>
 </body></html>"""
         return await self._render_html_to_png(html, width=520, height=400)
 
@@ -1219,10 +1278,18 @@ p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
         nickname = resp.get("nickname", target)
         rating = resp.get("rating", 0)
         username = resp.get("username", target)
+        plate = resp.get("plate", "")
 
         await self.ctx.send.text("正在生成 B50 图片，请稍候...", stream_id)
+
+        query_time_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        blessing = random.choice(self._BLESSINGS)
+
         try:
-            img_b64 = await self._render_b50_image(charts, username, nickname, rating)
+            img_b64 = await self._render_b50_image(
+                charts, username, nickname, rating,
+                query_time=query_time_str, blessing=blessing,
+            )
         except RuntimeError as e:
             await self.ctx.send.text(str(e), stream_id)
             return False, "渲染失败", True
@@ -1486,11 +1553,13 @@ p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
         ds_list = music.get("ds", [])
         ds_str = " / ".join(str(d) for d in ds_list)
 
+        blessing = random.choice(self._BLESSINGS)
+
         if cover_b64:
             await self.ctx.send.text("正在生成运势图片...", stream_id)
             try:
                 img_b64 = await self._render_today_image(
-                    rp, yi_parts, ji_parts, music, cover_b64,
+                    rp, yi_parts, ji_parts, music, cover_b64, blessing=blessing,
                 )
                 await self.ctx.send.image(img_b64, stream_id)
                 return True, "今日运势", True
@@ -1507,7 +1576,7 @@ p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
             f"━━━━━━━━━━━━━━",
             f"推荐曲目: [{_html.escape(tp)}] {_html.escape(title)} — {_html.escape(artist)}",
             f"ID: {_html.escape(sid)}  |  定数: {ds_str}",
-            f"MaiBot提醒您: 打机时不要大力拍打或滑动哦",
+            blessing,
         ]
         await self.ctx.send.text("\n".join(lines), stream_id)
         return True, "今日运势", True
@@ -1683,6 +1752,7 @@ p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
         pattern=r"^/mai maidle help$",
     )
     async def handle_maidle_help(self, stream_id: str = "", **kwargs: Any) -> tuple:
+        await self._track_user(stream_id, self._get_user_id(kwargs))
         try:
             img_b64 = await self._render_maidle_help_image()
             await self.ctx.send.image(img_b64, stream_id)
