@@ -2,6 +2,8 @@
 
 连接 [diving-fish（水鱼）](https://www.diving-fish.com) 与 [lxns](https://maimai.lxns.net) 双查分器 API，在 MaiBot 中查询舞萌 DX 的成绩与曲目数据。
 
+**注意**：落雪查分目前仅用做数据补充，还有一堆bug没有解决，请等待后续版本
+
 > **水鱼 API**: [https://www.diving-fish.com/api/maimaidxprober](https://www.diving-fish.com/api/maimaidxprober)  
 > **lxns API**: [https://maimai.lxns.net/api/v0](https://maimai.lxns.net)  
 > **插件版本**: 1.1.0 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
