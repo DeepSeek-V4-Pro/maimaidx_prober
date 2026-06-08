@@ -435,6 +435,24 @@ class MaiMaiDXPlugin(MaiBotPlugin):
         "午睡醒来…发现您还在出勤…ソルト给您续杯",
     ]
 
+    _PICK_PHRASES = [
+        ("ソルト认真想了想…觉得「{choice}」一定是今天的最佳选择なのです！"),
+        ("犹豫了{count}秒后，ソルト的小爪子指向了——「{choice}」！"),
+        ("ソルト从烤箱里取出热乎乎的面包…上面写着「{choice}」呢！"),
+        ("ソルト闭上眼睛转了三圈…哒哒！就是「{choice}」了喵～"),
+        ("根据ソルト的直觉雷达…「{choice}」正在闪闪发光なのです！"),
+        ("ソルト翻开Menu…今日推荐就是「{choice}」了，要好好享受呢～"),
+        ("揉面团的时候突然灵光一闪…就选「{choice}」吧！ソルト保证！"),
+        ("ソルト用尾巴尖儿指了指——「{choice}」，就它了！"),
+        ("ソルト把{count}个选项揉进面团…烤出来的面包上写着「{choice}」！"),
+        ("叮咚！ソルト的幸运签抽到了——「{choice}」！请收下这份好运喵～"),
+        ("ソルト翻开塔罗牌…命运之轮指向了「{choice}」なのです！"),
+        ("ソルト蹲在选项中间打了个滚…最后停在了「{choice}」旁边！"),
+        ("「{choice}」——ソルト的尾巴摇得像螺旋桨一样快，就它没错了！"),
+        ("ソルト偷看了一眼运势签，悄悄把「{choice}」塞到了你手里…"),
+        ("处女座ソルト今天推荐：「{choice}」！因为面包星座是这么说的なのです☆"),
+    ]
+
     async def on_load(self) -> None:
         self._http_session: Optional[aiohttp.ClientSession] = None
         self._api_client: Optional[DivingFishApiClient] = None
@@ -1642,23 +1660,37 @@ p{font-size:14px;color:#c0c0d0;line-height:1.7;margin-bottom:12px}
     ) -> tuple:
         await self._track_user(stream_id, self._get_user_id(kwargs))
         if not matched_groups or not matched_groups.get("options"):
-            await self.ctx.send.text("用法: /mai pick <选项1> <选项2> [选项3] [选项4]", stream_id)
+            await self.ctx.send.text(
+                "用法: /mai pick <选项1> <选项2> [选项3] [选项4]\n"
+                "例: /mai pick 吃饭 睡觉 打机 摸鱼\n"
+                "ソルト会从选项中帮你挑一个哦～",
+                stream_id,
+            )
             return False, "参数错误", True
         raw = matched_groups["options"].strip()
         opts = raw.split()
         if len(opts) < 2:
-            await self.ctx.send.text("至少需要 2 个选项，用空格分隔", stream_id)
+            await self.ctx.send.text(
+                "诶…只给ソルト一个选项的话，根本没得选呢…\n至少给 2 个选项，用空格隔开就好～",
+                stream_id,
+            )
             return False, "选项不足", True
         if len(opts) > 4:
             opts = opts[:4]
         opts = [o for o in opts if 1 <= len(o) <= 10]
         if len(opts) < 2:
-            await self.ctx.send.text("每个选项 1~10 字，请重新输入", stream_id)
+            await self.ctx.send.text(
+                "ソルト揉着面团歪了歪头…每个选项 1~10 个字比较合适呢，太长了ソルト会看花眼的喵～",
+                stream_id,
+            )
             return False, "选项无效", True
         chosen = random.choice(opts)
-        display = "  ·  ".join(opts)
+        opts_display = "\n".join(f"  {i}. {_html.escape(o)}" for i, o in enumerate(opts, 1))
+        phrase = random.choice(self._PICK_PHRASES).format(choice=_html.escape(chosen), count=len(opts))
+
         await self.ctx.send.text(
-            f"【帮你选】\n{display}\n\n→ 就决定是「{_html.escape(chosen)}」了！", stream_id,
+            f"【ソルト帮你选】\n\n{opts_display}\n\n{phrase}",
+            stream_id,
         )
         return True, "随机选择", True
 
