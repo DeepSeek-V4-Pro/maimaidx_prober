@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "version": "1.0.0",
-  "name": "MaiMai DX 查分器",
-  "description": "连接 diving-fish 查分器 API，支持 B50 查询（图片）、曲目搜索（含别称）、猜歌游戏、谱面统计与个人成绩查询",
+  "version": "1.1.0",
+  "name": "MaiMai DX 双源查分器",
+  "description": "连接 diving-fish 与 lxns 双查分器 API，支持 B50 查询（图片）、曲目搜索（含别称）、猜歌游戏、谱面统计、热力图、Rating趋势、收藏品、年度回顾与个人成绩查询",
   "author": {
     "name": "DeepSeek-V4",
     "url": "https://github.com/DeepSeek-V4-Pro"
