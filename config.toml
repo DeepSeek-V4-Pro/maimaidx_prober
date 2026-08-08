@@ -1,0 +1,23 @@
+[plugin]
+enabled = true
+config_version = "2.0.0"
+auto_install_deps = false
+
+[server]
+base_url = "https://www.diving-fish.com/api/maimaidxprober"
+request_timeout = 30
+music_cache_ttl = 300
+
+[lxns]
+enable = true
+base_url = "https://maimai.lxns.net/api/v0"
+asset_url = "https://assets.lxns.net"
+request_timeout = 30
+music_cache_ttl = 300
+
+[render]
+device_scale_factor = 2.0
+image_timeout_ms = 15000
+browser_executable = ""
+headless = true
+no_sandbox = true

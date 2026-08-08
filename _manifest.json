@@ -1,0 +1,49 @@
+{
+  "manifest_version": 2,
+  "version": "2.0.0",
+  "name": "MaiMai DX 双源查分器",
+  "description": "连接 diving-fish（水鱼）与 lxns（落雪）公开接口的舞萌 DX 查分插件，支持 B50 图片、曲目搜索（含别称与 lxns 数据补全）、猜歌游戏、谱面统计、运势、收藏品与个人成绩查询",
+  "author": {
+    "name": "DeepSeek-V4",
+    "url": "https://github.com/DeepSeek-V4-Pro"
+  },
+  "license": "GPL-3.0-or-later",
+  "urls": {
+    "repository": "https://github.com/DeepSeek-V4-Pro/maimaidx_prober",
+    "homepage": "https://github.com/DeepSeek-V4-Pro/maimaidx_prober",
+    "documentation": "https://github.com/DeepSeek-V4-Pro/maimaidx_prober",
+    "issues": "https://github.com/DeepSeek-V4-Pro/maimaidx_prober/issues"
+  },
+  "host_application": {
+    "min_version": "1.0.0",
+    "max_version": "1.99.99"
+  },
+  "sdk": {
+    "min_version": "2.0.0",
+    "max_version": "2.99.99"
+  },
+  "dependencies": [
+    {
+      "type": "python_package",
+      "name": "aiohttp",
+      "version_spec": ">=3.8"
+    },
+    {
+      "type": "python_package",
+      "name": "playwright",
+      "version_spec": ">=1.40"
+    }
+  ],
+  "capabilities": [
+    "send.text",
+    "send.forward",
+    "send.image",
+    "config.get",
+    "render.html2png"
+  ],
+  "i18n": {
+    "default_locale": "zh-CN",
+    "supported_locales": ["zh-CN"]
+  },
+  "id": "deepseek-v4-pro.maimaidx-prober"
+}
