@@ -58,6 +58,10 @@ class MusicService:
             self._song_cache = resp
             self._song_cache_time = now
             return resp
+        if isinstance(resp, dict) and resp.get("_not_modified"):
+            # 304：曲库未变更，刷新缓存时间后继续使用旧数据
+            self._song_cache_time = now
+            return self._song_cache
         if self._song_cache is not None:
             return self._song_cache
         logger.warning("曲库数据获取失败且无本地缓存可用")
@@ -68,6 +72,9 @@ class MusicService:
         if self._chart_stats_cache and (now - self._chart_stats_cache_time) < self._server_ttl:
             return self._chart_stats_cache
         resp = await self._df.get_chart_stats()
+        if isinstance(resp, dict) and resp.get("_not_modified"):
+            self._chart_stats_cache_time = now
+            return self._chart_stats_cache
         if isinstance(resp, dict) and not resp.get("_error"):
             self._chart_stats_cache = resp
             self._chart_stats_cache_time = now

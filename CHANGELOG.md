@@ -9,74 +9,80 @@
 - **B50 成绩图渲染相对完善**：官方版式复刻 + 官方素材 + 头像/段位/版本等头部
   信息齐全，是本插件完成度最高的部分；
 - **其余图片渲染**（my / song / today / help / heatmap / trend / maidle /
-  history / rank / year / collections / pick / status）已统一为 B50 同风格
-  浅色面板（字体/配色一致），但布局细节与装饰仍在完善；
-- `/mai charts`、`/mai alias *` 等仍为纯文本输出，待图片化；
-- 完整待办见 README「后续计划 (Roadmap)」。
+  history / rank / year / collections / pick / status / charts / alias /
+  lxns status / player / plate）已统一为 B50 同风格浅色面板；
+- 使用文档见 [README.md](README.md)，开发文档见 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## [3.0.0] - 2026-08-11
 
+> v3.0 是双源查分的完整重构版：水鱼 + 落雪统一选源、落雪账号能力全部回归、
+> 全部命令图片化、成绩双向同步、开发者权限控制。改动全部归入 3.0（不拆大版本）。
+
 ### 落雪（lxns）账号接入
 
-- 新增统一数据服务层 `PlayerQueryService`：`/mai b50`、`/mai my` 按绑定/配置
-  自动选源（绑定落雪 → 开发者密钥+好友码 → 水鱼兜底），两源共有功能只保留一份
-  实现；落雪请求失败时自动回退水鱼（强制落雪除外）。
-- 新增三种落雪接入方式：
-  - **OAuth 2.0**：`/mai lxns bind`（OOB 授权码流程，state + PKCE/密钥模式自适应），
-    令牌自动单飞刷新（15 分钟 access / 30 天 refresh 轮换）；
-  - **个人 API 密钥**：`/mai lxns bind token <密钥>`；
-  - **开发者 API**：`config.toml` 配置密钥后可用好友码查询。
-- 新增落雪独有能力命令：`/mai lxns heatmap / trend / history / rank / year /
-  collections / upload / comment`（水鱼无对应能力，不重复实现）。
-- 新增 `lxns_bindings.json`（OAuth 令牌 / 个人密钥）与 `[lxns]` 配置节扩展
-  （`enable_oauth`、`oauth_client_id/secret`、`oauth_authorize_url`、
-  `oauth_redirect_uri`、`oauth_scope`、`enable_developer_api`、`developer_api_key`）。
-- **强制数据源**：`/mai b50 [用户] [--lxns|--df]`、`/mai my [--lxns|--df]`
-  （含 `--落雪`/`--水鱼` 别名）跳过自动选源强制指定数据源；强制落雪未绑定/未配置
-  时给出引导，强制水鱼需已绑定 Token 或提供用户名。
-- 评论接口实测落雪服务端全部路径 404（接口未开放），命令保留并给出友好提示，
-  列表字段已按前端结构（`comment_id`/`uploader`/`comment`/`upload_time`）预留。
+- 三种接入方式：**OAuth 2.0**（OOB 授权码，state + PKCE/密钥模式自适应，access
+  15 分钟 / refresh 30 天且刷新轮换、单飞刷新）、**个人 API 密钥**、
+  **开发者 API**（好友码查询）；
+- 绑定管理：`/mai lxns bind / bind token / bind code / unbind / status`；
+- 落雪独有能力命令回归：`/mai lxns heatmap / trend / history / rank / year /
+  collections / upload / comment`；
+- 新增 `lxns_bindings.json` 与 `[lxns]` 配置节（OAuth / 个人密钥 / 开发者密钥）；
+- 评论接口实测落雪服务端全部路径 404，命令保留并给出友好提示。
 
-### 数据互补
+### 统一数据服务层
 
-- 落雪成绩自动用水鱼曲库补全定数（DS）与水鱼歌曲 ID，修复新曲封面缺失
-  （落雪新曲 ID = 水鱼 ID − 10000）。
-- `/mai lxns upload` 水鱼成绩同步到落雪，采用**成绩只升不降**策略：
-  缺失补齐、水鱼更高则覆盖（保留落雪原 `play_time`）、相同或更低跳过。
+- 新增 `PlayerQueryService`：自动选源（绑定落雪 → 开发者好友码 → 水鱼兜底）、
+  失败回退、归一化、互补合并；`/mai b50`、`/mai my` 两源只保留一份实现；
+- 强制数据源：`--lxns` / `--df`（含 `--落雪` / `--水鱼` 别名）。
+
+### 成绩双向同步
+
+- `/mai lxns upload`：水鱼 → 落雪（缺失补齐、更高覆盖并保留原游玩时间、相同/更低跳过）；
+- `/mai df upload`：落雪 → 水鱼（水鱼 `update_records` + Import-Token，
+  title+type 按水鱼曲库严格匹配，只升不降；服务层支持 dry_run）；
+- 数据互补：定数（DS）补全、封面 ID 修正（新曲 id − 10000）、
+  官方 RA 系数表回填（宴会场 utage 除外，RA 恒为 0）。
 
 ### 图片渲染
 
-- 新增 `core/renderers/theme.py` 设计系统，B50 重做为**官方 B50 版式**
-  （马卡龙渐变背景 + 菱形纹理、薄荷绿成绩区、青绿分区条、难度配色卡片
-  Basic 绿 / Advanced 橙 / Expert 红 / Master 紫 / Re:Master 淡白 / UTAGE 粉、
-  文字居左/曲绘居右半透明渐变衔接/右下编号框、圆润字体栈 Varela Round）。
-- 内置游戏官方素材（`assets/`，MIT / SEGA，含 NOTICE），base64 内嵌无网络依赖：
-  评级徽章、FC/FS/AP 奖牌、DX Score 星标（`dx_star`，按素材档位截断 1~3）、
-  版本图标、阶级/段位徽章，CHUNITHM 全套图标预留。
-- B50 头部：玩家头像（落雪来源，水鱼回退首字母）、白色名字框、友人对战阶级 +
-  段位挑战徽章（素材白底 multiply 溶白）、分档渐变 DX Rating、版本图标
-  （`assets/maimai/version/{version}.webp`，版本号来自 `[plugin].game_version`）。
-- 全部指令图片渲染统一为 B50 同风格浅色面板（my / song / today / help / heatmap /
-  trend / maidle / history / rank / year / collections / pick / status），
-  页脚数据来源统一「数据来源: maimai」；其中 history / rank / year / collections /
-  pick / status 为新增图片渲染（原先为纯文本）。
-- 细节：DX 星标位于曲名右侧截断空位；评级/FC/FS 徽章放大、成绩字号缩小；
-  游玩历史与绑定状态令牌过期时间转北京时间；热力图网格移入面板；
-  排行表列名「DX Score」。
+- B50 重做为**官方版式**（马卡龙渐变、难度配色卡片、官方徽章素材、头像、
+  段位/阶级、渐变 Rating、版本图标）；BEST 35 / 15 不足补「未游玩」占位卡；
+  卡片含 Lv 难度文字与单曲游玩时间；
+- 全部交互命令图片化：charts / alias list / lxns status / player / plate /
+  hot / ranking / best 等统一为 B50 同风格浅色面板；
+- `/mai lxns collections` 收藏品实物图（资源 CDN，称号 `color=image` 用图片）；
+- `/mai lxns year` 年度回顾多维度增强（评级/FC/难度分布、常玩分类与 BPM、
+  最常时段、Rating 成长对比）。
+
+### 水鱼能力
+
+- `/mai plate <版本代号>`：按版本查询（需 `[server].developer_token`）；
+- `/mai hot [N]`：热门歌曲加权统计（新曲 ×2、≥13 级 ×2、≥13.7 ×3）；
+- `/mai ranking [N]`：DX Rating 排行榜（公开数据，本地排序）；
+- `music_data` / `chart_stats` 自动 ETag / 304 增量缓存；
+- `/mai b50`、`/mai my` 检测水鱼查询掩码并提示。
+
+### 开发者能力与权限
+
+- 开发者端点：好友码查询、`/mai lxns ap50`（All Perfect 50）、
+  `/mai lxns qq`（按 QQ 查玩家）、`/mai lxns best <好友码>`；
+- **`[plugin].developer_qq` 白名单**：只有白名单内 QQ 可触发开发者功能，
+  列表为空时全部关闭，防止开发者密钥被陌生人借用。
 
 ### 工程与健壮性
 
-- 数据存储迁移到运行时标准目录 `data/plugins/deepseek-v4-pro.maimaidx-prober/`
-  （旧插件目录数据自动迁移，兼容读取）。
-- Dockerfile 版本约束加引号（`"aiohttp>=3.8"`、`"playwright>=1.40"`）。
-- 宴会场（utage）曲目 `song_type` 判定优先检查 `difficulties.utage`；
-  `/mai b50 <用户名>` 已绑定落雪时明确提示改用好友码；
-  `/mai lxns trend` 默认版本跟随 `[plugin].game_version`；
-  lxns 健康检查改走轻量端点（不再拉全量曲库）。
-- 健壮性：曲库排序 ID 容错、谱面统计 `fc_dist` 长度保护、封面 ID 容错、
-  my 难度索引类型保护。
-- 清理死代码：删除 lxns 客户端 10 个未使用方法、未使用导入、
-  `_get_tool_user_id`；入口 docstring 更新为 v3.0。
+- 数据存储迁移到运行时标准目录（旧插件目录自动迁移、兼容读取）；
+- 依赖自检 + `install_deps.py` + Dockerfile 示例 + `auto_install_deps`；
+- 错误响应非 dict 容错、落雪别名导入翻页上限、`fc_dist` 长度保护、
+  封面 ID / 难度索引容错、`/mai my` 按（song_id, 类型）去重；
+- 清理死代码与未使用导入。
+
+### 文档
+
+- 文档拆分为用户版 [README.md](README.md) 与开发者版 [DEVELOPMENT.md](DEVELOPMENT.md)；
+- 新增「落雪接入」章节、开发者权限说明；修正 FAQ（BEST 15 占位卡等）；
+- 扩充「安全说明 / 免责声明」：密钥类型、存储与吊销方式、日志红线、白名单、
+  责任边界；开发者文档新增「安全与密钥处理规范」与发布前审查清单。
 
 ## [2.0.0] - 2026-08-08
 

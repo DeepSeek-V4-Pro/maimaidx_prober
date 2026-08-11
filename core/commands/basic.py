@@ -11,7 +11,17 @@ from typing import Any
 from maibot_sdk import Command, Tool
 
 from ..constants import BLESSINGS, PICK_PHRASES
-from ..renderers import render_help, render_pick, render_song_detail, render_status, render_today
+from ..renderers import (
+    render_aliases,
+    render_charts,
+    render_help,
+    render_hot,
+    render_pick,
+    render_ranking,
+    render_song_detail,
+    render_status,
+    render_today,
+)
 from ..util import error_msg, format_music_summary, is_error, stable_user_uid
 from .base import SharedHelpersMixin
 
@@ -222,30 +232,76 @@ class BasicCommandsMixin(SharedHelpersMixin):
             await self.ctx.send.text("暂无谱面统计数据", stream_id)
             return False, "无数据", True
 
-        diff_order = [(0, "Basic"), (1, "Advanced"), (2, "Expert"), (3, "Master"), (4, "Re:Master")]
-        lines = ["【全谱面难度分布统计】"]
-        for diff_idx, diff_label in diff_order:
-            key = str(diff_idx)
-            if key in diff_data:
-                d = diff_data[key]
-                try:
-                    ach = float(d.get("achievements", 0))
-                except (TypeError, ValueError):
-                    ach = 0.0
-                fc_dist = d.get("fc_dist", [0, 0, 0, 0, 0])
-                if not isinstance(fc_dist, list) or len(fc_dist) < 5:
-                    fc_dist = [0, 0, 0, 0, 0]
-                total = sum(fc_dist) if fc_dist else 1
-                ap_rate = ((fc_dist[3] + fc_dist[4]) / total * 100) if total > 0 else 0
-                fc_rate = ((sum(fc_dist[1:])) / total * 100) if total > 0 else 0
-                lines.append(
-                    f"{diff_label:12s}  均达成率: {ach:.2f}%  "
-                    f"FC 率: {fc_rate:.1f}%  AP 率: {ap_rate:.1f}%"
-                )
+        total_songs = len(data.get("charts", {}))
+        await self.ctx.send.text("正在生成统计图片...", stream_id)
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_charts(self._renderer, diff_data, total_songs),
+            "统计图片生成失败",
+        )
+        return ok, "显示统计", True
 
-        lines.append(f"\n数据来源: diving-fish.com  (共 {len(data.get('charts', {}))} 首歌曲)")
-        await self.ctx.send.text("\n".join(lines), stream_id)
-        return True, "显示统计", True
+    # ---- 热门歌曲 ----
+
+    @Command(
+        "mai_hot",
+        description="查看水鱼热门歌曲 TOP N",
+        pattern=r"^/mai hot(\s+(?P<limit>\d+))?$",
+    )
+    async def handle_hot(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        await self._track_user(stream_id, self._get_user_id(kwargs))
+        limit = 10
+        if matched_groups and matched_groups.get("limit"):
+            try:
+                limit = max(1, min(int(matched_groups["limit"]), 30))
+            except (TypeError, ValueError):
+                pass
+        ok, items, err = await self._players.get_hot_music_top(limit)
+        if not ok:
+            await self.ctx.send.text(err or "获取热门歌曲失败", stream_id)
+            return False, "获取失败", True
+        if not items:
+            await self.ctx.send.text("暂无热门歌曲数据", stream_id)
+            return False, "无数据", True
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_hot(self._renderer, items, limit),
+            "热门歌曲图片生成失败",
+        )
+        return ok, "显示热门歌曲", True
+
+    # ---- Rating 排行榜 ----
+
+    @Command(
+        "mai_ranking",
+        description="查看水鱼 DX Rating 排行榜 TOP N",
+        pattern=r"^/mai ranking(\s+(?P<limit>\d+))?$",
+    )
+    async def handle_ranking(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        await self._track_user(stream_id, self._get_user_id(kwargs))
+        limit = 20
+        if matched_groups and matched_groups.get("limit"):
+            try:
+                limit = max(1, min(int(matched_groups["limit"]), 50))
+            except (TypeError, ValueError):
+                pass
+        ok, items, err = await self._players.get_rating_ranking(limit)
+        if not ok:
+            await self.ctx.send.text(err or "获取排行榜失败", stream_id)
+            return False, "获取失败", True
+        if not items:
+            await self.ctx.send.text("暂无排行榜数据", stream_id)
+            return False, "无数据", True
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_ranking(self._renderer, items, limit),
+            "排行榜图片生成失败",
+        )
+        return ok, "显示排行榜", True
 
     # ---- 服务器状态 ----
 
@@ -474,6 +530,15 @@ class BasicCommandsMixin(SharedHelpersMixin):
                 stream_id,
             )
         else:
+            ok = await self._render_and_send(
+                stream_id,
+                lambda: render_aliases(
+                    self._renderer, title, song_id, aliases,
+                ),
+                "别称图片生成失败",
+            )
+            if ok:
+                return True, "列出别称", True
             lines = [
                 "【别称管理】",
                 f"{_html.escape(title)} (ID: {_html.escape(song_id)}) 的别称:",

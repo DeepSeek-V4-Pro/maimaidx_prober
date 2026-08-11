@@ -73,6 +73,9 @@ class CoverService:
         self._cache: "OrderedDict[str, Optional[str]]" = OrderedDict()
         self._b64_cache: "OrderedDict[str, str]" = OrderedDict()
         self._max_cache = 300
+        # 通用图片（收藏品 / 头像 / 姓名框 / 背景）缓存，按 URL 为 key
+        self._image_cache: "OrderedDict[str, Optional[str]]" = OrderedDict()
+        self._image_b64_cache: "OrderedDict[str, str]" = OrderedDict()
 
     def _cache_set(self, key: str, mime: Optional[str], b64: Optional[str]) -> None:
         if mime is None:
@@ -153,6 +156,35 @@ class CoverService:
             return None
         return f"data:{info['mime']};base64,{info['b64']}"
 
+    async def get_image_data_url(self, url: str) -> Optional[str]:
+        """下载任意静态图并返回 data URI；失败返回 None（已按魔数校验）。"""
+
+        if not url:
+            return None
+        if url in self._image_cache:
+            cached = self._image_cache[url]
+            if cached:
+                b64 = self._image_b64_cache.get(url, "")
+                if b64:
+                    return f"data:{cached};base64,{b64}"
+            return None
+
+        result = await self._download_validated(url)
+        if result is None:
+            self._image_cache[url] = None
+            return None
+        data, mime = result
+        b64 = base64.b64encode(data).decode()
+        self._image_cache[url] = mime
+        self._image_b64_cache[url] = b64
+        while len(self._image_cache) > self._max_cache:
+            self._image_cache.popitem(last=False)
+        while len(self._image_b64_cache) > self._max_cache:
+            self._image_b64_cache.popitem(last=False)
+        return f"data:{mime};base64,{b64}"
+
     def invalidate(self) -> None:
         self._cache.clear()
         self._b64_cache.clear()
+        self._image_cache.clear()
+        self._image_b64_cache.clear()

@@ -9,7 +9,7 @@ from typing import Any
 from maibot_sdk import Command
 
 from ..constants import BLESSINGS
-from ..renderers import render_b50, render_my
+from ..renderers import render_b50, render_my, render_plate
 from ..util import error_msg, is_error
 from .base import SharedHelpersMixin
 
@@ -66,6 +66,12 @@ class ScoreCommandsMixin(SharedHelpersMixin):
             ),
             "B50 图片生成失败",
         )
+        if ok and data.get("masked"):
+            await self.ctx.send.text(
+                "⚠ 该账号可能开启了查询掩码，成绩为掩码后的近似值"
+                "（dxScore 显示为 0），仅供粗略参考。",
+                stream_id,
+            )
         return ok, "发送B50图片", True
 
     @Command(
@@ -170,4 +176,46 @@ class ScoreCommandsMixin(SharedHelpersMixin):
             ),
             "个人成绩图片生成失败",
         )
+        if ok and data.get("masked"):
+            await self.ctx.send.text(
+                "⚠ 该账号可能开启了查询掩码，成绩为掩码后的近似值。",
+                stream_id,
+            )
         return ok, "显示摘要", True
+
+    @Command(
+        "mai_plate",
+        description="按版本查询水鱼成绩（需配置水鱼 Developer-Token）",
+        pattern=r"^/mai plate\s+(?P<versions>.+)$",
+    )
+    async def handle_plate(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        user_id = self._get_user_id(kwargs)
+        await self._track_user(stream_id, user_id)
+        raw = (matched_groups or {}).get("versions", "").strip()
+        versions = [v for v in raw.split() if v.strip()]
+        if not versions:
+            await self.ctx.send.text("用法: /mai plate <版本代号>", stream_id)
+            return False, "参数错误", True
+        ok, data, err = await self._players.get_plate(user_id, "", versions)
+        if not ok:
+            await self.ctx.send.text(err, stream_id)
+            return False, "查询失败", True
+        verlist = data.get("verlist") or []
+        if not verlist:
+            await self.ctx.send.text(
+                f"「{'、'.join(versions)}」暂无已游玩谱面记录", stream_id
+            )
+            return False, "无记录", True
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_plate(
+                self._renderer,
+                data["username"],
+                data["versions"],
+                verlist,
+            ),
+            "版本成绩图片生成失败",
+        )
+        return ok, "显示版本成绩", True

@@ -14,18 +14,21 @@
 import asyncio
 from datetime import datetime, timezone
 from typing import Any, Optional
-from zoneinfo import ZoneInfo
 
 from ..clients.diving_fish import DivingFishApiClient
 from ..clients.lxns import LxnsApiClient
 from ..constants import DIFF_NAMES
+from ..rating import compute_ra
 from ..services.lxns_auth import LxnsAuthService
 from ..services.music import MusicService
 from ..services.normalize import normalize_lxns_bests, normalize_lxns_score
 from ..stores.bindings import BindingStore
 from ..util import error_msg, fmt_utc, is_error
 
-_LOCAL_TZ = ZoneInfo("Asia/Shanghai")
+_DEV_PERMISSION_MSG = (
+    "开发者功能仅限授权 QQ 使用：请联系管理员在 config.toml 的 "
+    "[plugin].developer_qq 中加入你的 QQ 号"
+)
 
 
 def _fmt_utc(ts: Any) -> str:
@@ -58,6 +61,8 @@ class PlayerQueryService:
         bindings: BindingStore,
         music: MusicService,
         game_version: int = 25500,
+        df_developer_token: str = "",
+        developer_qq: Optional[list] = None,
     ) -> None:
         self._df = df
         self._lxns = lxns
@@ -65,6 +70,15 @@ class PlayerQueryService:
         self._bindings = bindings
         self._music = music
         self._game_version = game_version
+        self._df_developer_token = df_developer_token
+        self._developer_qq = {str(q) for q in (developer_qq or [])}
+
+    # ---- 开发者权限 ----
+
+    def _developer_allowed(self, user_id: str) -> bool:
+        """判断 QQ 是否在开发者白名单内（空名单 = 禁止所有人）。"""
+
+        return bool(self._developer_qq) and str(user_id) in self._developer_qq
 
     # ---- 源解析 ----
 
@@ -92,6 +106,8 @@ class PlayerQueryService:
             return "water_fish", None, df_binding, ""
 
         if target and _is_friend_code(target):
+            if not self._developer_allowed(user_id):
+                return "", None, None, _DEV_PERMISSION_MSG
             dev_auth = self._auth_svc.developer_auth()
             if not dev_auth:
                 return "", None, None, (
@@ -165,7 +181,11 @@ class PlayerQueryService:
     # ---- 水鱼互补（定数 / 封面 ID / 成绩上传映射）----
 
     async def _enrich_with_df(self, records: list[dict]) -> None:
-        """用 水鱼曲库 补全落雪成绩的定数（ds）与水鱼歌曲 ID（df_song_id）。"""
+        """用 水鱼曲库 补全落雪成绩的定数（ds）与水鱼歌曲 ID（df_song_id）。
+
+        补全定数后，若落雪未返回 dx_rating（或为 0），按官方系数表回填 RA，
+        保证 B50 / my 卡片不出现空的 RA 值。
+        """
 
         for item in records:
             try:
@@ -184,6 +204,34 @@ class PlayerQueryService:
                 item["ds"] = ds_list[li]
             if not item.get("title"):
                 item["title"] = df_song.get("title", "")
+            # 宴会场（utage）成绩的 RA 官方固定为 0，不参与系数表回填
+            if str(item.get("type", "")).strip().lower() == "utage":
+                continue
+            try:
+                ra = int(item.get("ra") or 0)
+            except (TypeError, ValueError):
+                ra = 0
+            if ra <= 0:
+                ds = item.get("ds")
+                ach = item.get("achievements")
+                if ds not in (None, "", 0) and ach not in (None, ""):
+                    item["ra"] = compute_ra(ds, ach)
+
+    @staticmethod
+    def _detect_mask(records: list[dict]) -> bool:
+        """启发式判断水鱼查询是否返回了掩码数据。
+
+        水鱼对开启 ``mask`` 的第三方查询返回：``dxScore=0``、
+        达成率为按 RA 反推的低精度值。若全部记录 dxScore 均为 0，
+        大概率命中了查询掩码。
+        """
+
+        if not records:
+            return False
+        return all(
+            isinstance(r, dict) and not r.get("dxScore")
+            for r in records
+        )
 
     # ---- B50 ----
 
@@ -204,6 +252,7 @@ class PlayerQueryService:
         charts = resp.get("charts", {})
         if not charts or (not charts.get("sd") and not charts.get("dx")):
             return False, {}, f"{query_target} 暂无成绩记录"
+        all_records = (charts.get("sd") or []) + (charts.get("dx") or [])
         return True, {
             "source": "water_fish",
             "charts": charts,
@@ -214,6 +263,7 @@ class PlayerQueryService:
             "version": self._game_version,
             "course_rank": None,
             "class_rank": None,
+            "masked": self._detect_mask(all_records),
         }, ""
 
     async def get_b50(
@@ -335,6 +385,9 @@ class PlayerQueryService:
             "class_rank": None,
             "star": None,
             "records": resp.get("records", []) if isinstance(resp.get("records"), list) else [],
+            "masked": self._detect_mask(
+                resp.get("records", []) if isinstance(resp.get("records"), list) else []
+            ),
         }, ""
 
     async def get_my(
@@ -564,6 +617,99 @@ class PlayerQueryService:
             "source": "lxns",
         }, ""
 
+    # ---- 落雪 All Perfect 50（开发者模式）----
+
+    async def get_ap50(
+        self, user_id: str, target: str,
+    ) -> tuple[bool, dict, str]:
+        """按好友码查询落雪 AP50（开发者 API 专属端点）。"""
+
+        target = (target or "").strip()
+        if not _is_friend_code(target):
+            return False, {}, "用法: /mai lxns ap50 <好友码>（需管理员配置落雪开发者密钥）"
+        if not self._developer_allowed(user_id):
+            return False, {}, _DEV_PERMISSION_MSG
+        dev_auth = self._auth_svc.developer_auth()
+        if not dev_auth:
+            return False, {}, (
+                "好友码查询需要管理员在 config.toml 配置 [lxns].enable_developer_api "
+                "与 developer_api_key"
+            )
+        fc = int(target)
+        bests = await self._lxns.get_player_ap_bests(fc, dev_auth)
+        if is_error(bests):
+            return False, {}, error_msg(bests)
+        player = await self._lxns.get_player(fc, dev_auth)
+        name = ""
+        rating = 0
+        avatar_url = ""
+        course_rank = None
+        class_rank = None
+        if not is_error(player) and isinstance(player.get("data"), dict):
+            pdata = player["data"]
+            name = str(pdata.get("name", ""))
+            rating = int(pdata.get("rating") or 0)
+            course_rank = pdata.get("course_rank")
+            class_rank = pdata.get("class_rank")
+            icon = pdata.get("icon")
+            if isinstance(icon, dict) and icon.get("id"):
+                avatar_url = LxnsApiClient.get_icon_url(
+                    self._lxns.asset_url, int(icon["id"])
+                )
+        charts = normalize_lxns_bests(bests.get("data"))
+        await self._enrich_with_df(charts.get("sd", []) + charts.get("dx", []))
+        query_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        return True, {
+            "source": "lxns",
+            "charts": charts,
+            "username": name,
+            "nickname": name or f"好友码 {fc}",
+            "rating": rating,
+            "query_time": query_time,
+            "avatar_url": avatar_url,
+            "version": self._game_version,
+            "course_rank": course_rank,
+            "class_rank": class_rank,
+        }, ""
+
+    # ---- 水鱼按版本查询（Developer-Token）----
+
+    async def get_plate(
+        self, user_id: str, target: str, versions: list[str],
+    ) -> tuple[bool, dict, str]:
+        """按版本查询水鱼成绩（/query/plate，需 Developer-Token）。"""
+
+        if not self._df_developer_token:
+            return False, {}, (
+                "未配置水鱼 Developer-Token，请在 config.toml 的 [server] 段"
+                "填写 developer_token"
+            )
+        if not self._developer_allowed(user_id):
+            return False, {}, _DEV_PERMISSION_MSG
+        if not versions:
+            return False, {}, "请提供至少一个版本代号"
+        target = (target or "").strip()
+        if not target:
+            df_binding = await self._bindings.get(user_id)
+            target = str((df_binding or {}).get("username", ""))
+        if not target:
+            return False, {}, (
+                "用法: /mai plate <版本代号> [用户]\n"
+                "版本代号示例: 真 超 檄 橙 暁 桃 櫻 紫 菫 白 雪 輝 舞 熊 華 爽 煌 宙 星 祭 祝 双 宴 鏡"
+            )
+        resp = await self._df.query_plate(target, versions, self._df_developer_token)
+        if is_error(resp):
+            return False, {}, error_msg(resp)
+        verlist = resp.get("verlist", [])
+        if not isinstance(verlist, list):
+            verlist = []
+        return True, {
+            "source": "water_fish",
+            "username": resp.get("username") or target,
+            "versions": list(versions),
+            "verlist": verlist,
+        }, ""
+
     # ---- 水鱼 → 落雪 成绩上传 ----
 
     async def _map_df_records(
@@ -691,4 +837,279 @@ class PlayerQueryService:
             "uploaded": uploaded,
             "skipped": skipped,
             "errors": errors,
+        }, ""
+
+    # ---- 落雪 → 水鱼 成绩上传（水鱼 /player/update_records）----
+
+    async def upload_lxns_to_df(
+        self, user_id: str, dry_run: bool = False,
+    ) -> tuple[bool, dict, str]:
+        """把落雪成绩同步上传到水鱼账号（需水鱼绑定 Import-Token）。
+
+        水鱼 ``update_records`` 以 ``title + type + level_index`` 定位成绩
+        （不以 song_id 为准），因此先经曲库反查水鱼标题/类型，保证严格匹配；
+        采用与 /mai lxns upload 一致的「只升不降」策略。
+        ``dry_run=True`` 时只做映射与差异统计，不实际写入。
+        """
+
+        df_binding = await self._bindings.get(user_id)
+        if not df_binding:
+            return False, {}, "未绑定水鱼账号（上传目标），请先 /mai bind <水鱼Token>"
+        import_token = str(df_binding.get("import_token", ""))
+        if not import_token:
+            return False, {}, "水鱼绑定数据异常，请重新 /mai bind"
+        auth, err = await self._auth_svc.get_auth(user_id)
+        if not auth:
+            return False, {}, f"未绑定落雪账号（数据源）：{err}"
+
+        scores = await self._lxns.get_user_scores(auth)
+        if is_error(scores):
+            return False, {}, f"获取落雪成绩失败: {error_msg(scores)}"
+        lxns_scores = scores.get("data") if isinstance(scores, dict) else None
+        if not isinstance(lxns_scores, list) or not lxns_scores:
+            return False, {}, "落雪账号暂无成绩数据"
+
+        # 映射为水鱼 update_records 负载（title+type 以水鱼曲库为准）
+        mapped: list[dict] = []
+        skipped = 0
+        for s in lxns_scores:
+            if not isinstance(s, dict):
+                skipped += 1
+                continue
+            # 宴会场难度映射不可靠且水鱼端 RA 语义不同，跳过
+            if str(s.get("type", "")).strip().lower() == "utage":
+                skipped += 1
+                continue
+            # 无达成率的记录上传到水鱼会被当作 0 分创建，跳过
+            if s.get("achievements") in (None, ""):
+                skipped += 1
+                continue
+            try:
+                lid = int(s.get("id") or 0)
+            except (TypeError, ValueError):
+                skipped += 1
+                continue
+            df_song = await self._music.get_df_song_by_lxns_id(lid)
+            if not df_song:
+                skipped += 1
+                continue
+            li = s.get("level_index")
+            if not isinstance(li, int) or li < 0:
+                skipped += 1
+                continue
+            mapped.append({
+                "title": str(df_song.get("title", "")),
+                "type": str(df_song.get("type", "SD")),
+                "level_index": li,
+                "achievements": s.get("achievements"),
+                "fc": s.get("fc") or "",
+                "fs": s.get("fs") or "",
+                "dxScore": s.get("dx_score") or 0,
+            })
+        if not mapped:
+            return False, {}, f"没有可映射到水鱼曲库的成绩（共跳过 {skipped} 条）"
+
+        # 只升不降：拉取水鱼现有成绩做对比
+        existing = await self._df.get_player_records(import_token)
+        existing_by_key: dict[tuple, dict] = {}
+        if not is_error(existing) and isinstance(existing.get("records"), list):
+            for r in existing["records"]:
+                if isinstance(r, dict):
+                    existing_by_key[(
+                        str(r.get("title", "")), str(r.get("type", "")),
+                        r.get("level_index"),
+                    )] = r
+
+        to_upload: list[dict] = []
+        new_count = 0
+        upgraded_count = 0
+        unchanged_count = 0
+        for s in mapped:
+            key = (s["title"], s["type"], s["level_index"])
+            cur = existing_by_key.get(key)
+            try:
+                new_ach = float(s.get("achievements") or 0)
+            except (TypeError, ValueError):
+                unchanged_count += 1
+                continue
+            if cur is None:
+                to_upload.append(s)
+                new_count += 1
+                continue
+            try:
+                cur_ach = float(cur.get("achievements") or 0)
+            except (TypeError, ValueError):
+                cur_ach = 0.0
+            if new_ach > cur_ach + 0.0001:
+                to_upload.append(s)
+                upgraded_count += 1
+            else:
+                unchanged_count += 1
+
+        uploaded = 0
+        errors: list[str] = []
+        chunk_size = 100
+        if dry_run:
+            # 干跑：不调用写接口，仅统计待上传批次
+            uploaded = 0
+            for i in range(0, len(to_upload), chunk_size):
+                errors.append(f"干跑：第 {i // chunk_size + 1} 批（{len(to_upload[i:i + chunk_size])} 条）未写入")
+        else:
+            for i in range(0, len(to_upload), chunk_size):
+                part = to_upload[i:i + chunk_size]
+                resp = await self._df.update_records(import_token, part)
+                if is_error(resp):
+                    errors.append(f"第 {i // chunk_size + 1} 批（{len(part)} 条）上传失败: {error_msg(resp)}")
+                    break
+                uploaded += len(part)
+
+        return True, {
+            "total": len(lxns_scores),
+            "mapped": len(mapped),
+            "new": new_count,
+            "upgraded": upgraded_count,
+            "unchanged": unchanged_count,
+            "planned": len(to_upload),
+            "uploaded": uploaded,
+            "skipped": skipped,
+            "errors": errors,
+            "dry_run": dry_run,
+        }, ""
+
+    # ---- 水鱼公共数据：热门歌曲 / 排行榜 ----
+
+    async def get_hot_music_top(
+        self, limit: int = 10,
+    ) -> tuple[bool, list[dict], str]:
+        """热门歌曲 TOP N（权重已含新曲/高难度加权，展示时取百分比）。"""
+
+        resp = await self._df.get_hot_music()
+        if is_error(resp):
+            return False, [], error_msg(resp)
+        if not isinstance(resp, dict) or not resp:
+            return False, [], "暂无热门歌曲数据"
+        items = sorted(
+            ((str(k), float(v)) for k, v in resp.items() if v),
+            key=lambda x: x[1], reverse=True,
+        )[:limit]
+        songs = self._music._song_cache or await self._music.get_songs()
+        by_id = {
+            str(m.get("id")): m
+            for m in songs if isinstance(m, dict)
+        } if songs else {}
+        result: list[dict] = []
+        for sid, weight in items:
+            music = by_id.get(sid) or {}
+            result.append({
+                "id": sid,
+                "title": str(music.get("title", sid)),
+                "type": str(music.get("type", "?")),
+                "max_ds": max(music.get("ds", [0])) if music.get("ds") else 0,
+                "is_new": bool((music.get("basic_info") or {}).get("is_new")),
+                "weight": weight,
+            })
+        return True, result, ""
+
+    async def get_rating_ranking(
+        self, limit: int = 20,
+    ) -> tuple[bool, list[dict], str]:
+        """DX Rating 排行榜 TOP N（公开数据，服务端未排序需自行排序）。"""
+
+        resp = await self._df.get_rating_ranking()
+        if is_error(resp):
+            return False, [], error_msg(resp)
+        if not isinstance(resp, list):
+            return False, [], "排行榜数据异常"
+        items = [
+            {"username": str(x.get("username", "?")), "ra": int(x.get("ra") or 0)}
+            for x in resp if isinstance(x, dict)
+        ]
+        items.sort(key=lambda x: x["ra"], reverse=True)
+        return True, items[:limit], ""
+
+    # ---- 落雪单曲最佳 / 按 QQ 查玩家（开发者模式）----
+
+    async def get_lxns_best(
+        self, user_id: str, keyword: str, target_fc: str = "",
+    ) -> tuple[bool, dict, str]:
+        """单曲所有谱面的最佳成绩；好友码走开发者 API，否则用绑定账号。"""
+
+        lxns_song, err = await self._resolve_song(keyword)
+        if not lxns_song:
+            return False, {}, err
+        sid = int(lxns_song["id"])
+        target_fc = (target_fc or "").strip()
+        if target_fc:
+            if not _is_friend_code(target_fc):
+                return False, {}, "好友码格式不正确（应为 12 位以上数字）"
+            if not self._developer_allowed(user_id):
+                return False, {}, _DEV_PERMISSION_MSG
+            dev_auth = self._auth_svc.developer_auth()
+            if not dev_auth:
+                return False, {}, (
+                    "好友码查询需要管理员配置 [lxns].enable_developer_api "
+                    "与 developer_api_key"
+                )
+            resp = await self._lxns.get_player_bests(
+                int(target_fc), dev_auth, song_id=sid,
+            )
+        else:
+            auth, aerr = await self._resolve_lxns(user_id)
+            if not auth:
+                return False, {}, aerr
+            resp = await self._lxns.get_user_bests(
+                auth, song_id=sid,
+            )
+        if is_error(resp):
+            return False, {}, error_msg(resp)
+        charts = normalize_lxns_bests(resp.get("data"))
+        rows: list[dict] = []
+        for section, is_dx in (("sd", False), ("dx", True)):
+            for rec in charts.get(section, []):
+                try:
+                    li = int(rec.get("level_index", 0))
+                except (TypeError, ValueError):
+                    li = -1
+                rows.append({
+                    "level_name": DIFF_NAMES[li] if 0 <= li < 5 else str(rec.get("level_index", "?")),
+                    "type": "DX" if is_dx else "SD",
+                    "achievements": rec.get("achievements"),
+                    "dx_score": rec.get("dx_score"),
+                    "fc": rec.get("fc", ""),
+                    "fs": rec.get("fs", ""),
+                    "upload_time": _fmt_utc(
+                        rec.get("play_time") or rec.get("last_played_time")
+                    ),
+                })
+        return True, {
+            "song_id": sid,
+            "title": str(lxns_song.get("title", "")),
+            "rows": rows,
+            "source": "lxns",
+        }, ""
+
+    async def get_lxns_player_by_qq(
+        self, user_id: str, qq: str,
+    ) -> tuple[bool, dict, str]:
+        """按 QQ 号查询落雪玩家（开发者 API）。"""
+
+        qq = (qq or "").strip()
+        if not qq.isdigit():
+            return False, {}, "QQ 号格式不正确"
+        if not self._developer_allowed(user_id):
+            return False, {}, _DEV_PERMISSION_MSG
+        dev_auth = self._auth_svc.developer_auth()
+        if not dev_auth:
+            return False, {}, (
+                "按 QQ 查询需要管理员配置 [lxns].enable_developer_api "
+                "与 developer_api_key"
+            )
+        resp = await self._lxns.get_player_by_qq(qq, dev_auth)
+        if is_error(resp):
+            return False, {}, error_msg(resp)
+        data = resp.get("data") or {}
+        return True, {
+            "source": "lxns",
+            "player": data,
+            "username": str(data.get("name", "") or f"QQ {qq}"),
         }, ""

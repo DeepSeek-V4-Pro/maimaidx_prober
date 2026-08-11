@@ -78,8 +78,9 @@ class AliasStore(JsonStore):
         imported = 0
         skipped = 0
         page = 1
+        max_pages = 100  # 防呆：服务端异常时避免无限翻页
         pending: list[tuple[str, str]] = []
-        while True:
+        while page <= max_pages:
             resp = await fetch_page(page)
             if not isinstance(resp, dict) or resp.get("_error"):
                 break

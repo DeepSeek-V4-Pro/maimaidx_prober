@@ -6,22 +6,30 @@
 collections / comment）以及绑定管理（bind / unbind / status）。
 """
 
+import asyncio
 import html as _html
 import logging
+import random
 from datetime import datetime, timezone
 from typing import Any
 
 from maibot_sdk import Command
 
+from ..clients.lxns import LxnsApiClient
+from ..constants import BLESSINGS
 from ..renderers import (
+    render_b50,
+    render_best,
     render_collections,
     render_heatmap,
     render_history,
+    render_lxns_status,
+    render_player,
     render_rank,
     render_trend,
     render_year,
 )
-from ..util import error_msg, fmt_utc, is_error
+from ..util import error_msg, is_error
 from .base import SharedHelpersMixin
 
 logger = logging.getLogger(__name__)
@@ -135,27 +143,98 @@ class LxnsCommandsMixin(SharedHelpersMixin):
         user_id = self._get_user_id(kwargs)
         await self._track_user(stream_id, user_id)
         binding = await self._lxns_bindings.get(user_id)
-        lines = ["【落雪绑定状态】"]
-        if not binding:
-            lines.append("状态: 未绑定")
-            lines.append("绑定方式: /mai lxns bind（OAuth）或 /mai lxns bind token <个人密钥>")
-        else:
-            mode = "OAuth" if binding.get("mode") == "oauth" else "个人 API 密钥"
-            lines.append(f"状态: 已绑定（{mode}）")
-            lines.append(f"玩家: {_html.escape(str(binding.get('username', '?')))}")
-            fc = binding.get("friend_code")
-            if fc:
-                lines.append(f"好友码: {fc}")
-            if binding.get("mode") == "oauth":
-                lines.append(
-                    f"访问令牌过期: {fmt_utc(binding.get('expires_at', ''))}（自动刷新）"
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_lxns_status(
+                self._renderer,
+                binding,
+                self._lxns_auth.oauth_enabled,
+                self._lxns_auth.developer_enabled,
+                developer_qq_count=len(self.config.plugin.developer_qq),
+            ),
+            "状态图片生成失败",
+        )
+        return ok, "显示状态", True
+
+    # ---- 玩家资料卡 ----
+
+    @Command(
+        "mai_lxns_player",
+        description="查看落雪玩家资料卡",
+        pattern=r"^/mai lxns player(\s+(?P<target>\S+))?$",
+    )
+    async def handle_lxns_player(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        user_id = self._get_user_id(kwargs)
+        await self._track_user(stream_id, user_id)
+        target = (matched_groups or {}).get("target", "").strip()
+        ok, data, err = await self._players.get_player(user_id, target)
+        if not ok:
+            await self.ctx.send.text(err, stream_id)
+            return False, "获取失败", True
+        player = data.get("player") or {}
+        source = data.get("source", "")
+        assets: dict[str, str] = {}
+        if source == "lxns" and isinstance(player, dict):
+            icon = player.get("icon")
+            if isinstance(icon, dict) and icon.get("id"):
+                url = LxnsApiClient.get_icon_url(
+                    self._lxns.asset_url, int(icon["id"]),
                 )
-            lines.append(f"绑定时间: {str(binding.get('bound_at', ''))[:19].replace('T', ' ')}")
-        oauth_cfg = "已配置" if self._lxns_auth.oauth_enabled else "未配置"
-        dev_cfg = "已配置" if self._lxns_auth.developer_enabled else "未配置"
-        lines.append(f"OAuth 应用: {oauth_cfg} · 开发者密钥: {dev_cfg}")
-        await self.ctx.send.text("\n".join(lines), stream_id)
-        return True, "显示状态", True
+                avatar = await self._covers.get_image_data_url(url)
+                if avatar:
+                    assets["avatar"] = avatar
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_player(
+                self._renderer,
+                player,
+                data.get("username", ""),
+                source,
+                assets,
+            ),
+            "玩家资料图片生成失败",
+        )
+        return ok, "显示玩家资料", True
+
+    # ---- All Perfect 50（开发者模式）----
+
+    @Command(
+        "mai_lxns_ap50",
+        description="查询落雪 All Perfect 50（好友码，开发者模式）",
+        pattern=r"^/mai lxns ap50\s+(?P<target>\d+)$",
+    )
+    async def handle_lxns_ap50(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        user_id = self._get_user_id(kwargs)
+        await self._track_user(stream_id, user_id)
+        target = (matched_groups or {}).get("target", "").strip()
+        ok, data, err = await self._players.get_ap50(user_id, target)
+        if not ok:
+            await self.ctx.send.text(err, stream_id)
+            return False, "查询失败", True
+        await self.ctx.send.text("正在生成 AP50 图片，请稍候...", stream_id)
+        blessing = random.choice(BLESSINGS)
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_b50(
+                self._renderer,
+                data["charts"],
+                data["username"],
+                data["nickname"],
+                data["rating"],
+                query_time=data["query_time"],
+                blessing=blessing,
+                avatar_url=data.get("avatar_url", ""),
+                version=data.get("version", 25500),
+                course_rank=data.get("course_rank"),
+                class_rank=data.get("class_rank"),
+            ),
+            "AP50 图片生成失败",
+        )
+        return ok, "发送AP50图片", True
 
     # ---- 落雪独有能力 ----
 
@@ -319,40 +398,6 @@ class LxnsCommandsMixin(SharedHelpersMixin):
         )
         return ok, "显示年度回顾", True
 
-    async def _format_year_review(self, review: dict) -> str:
-        year = review.get("year", "?")
-        name = _html.escape(str(review.get("player_name", "玩家")))
-        uploads = review.get("player_total_uploads") or {}
-        total = sum(int(v) for v in uploads.values() if isinstance(v, (int, float)))
-        days = review.get("player_upload_days", 0)
-        lines = [
-            f"【落雪年度回顾 {year}】",
-            f"玩家: {name}",
-            f"总上传: {total} 次 · 出勤 {days} 天",
-        ]
-        monthly = review.get("player_monthly_uploads") or {}
-        top_months = sorted(
-            ((int(k), int(v)) for k, v in monthly.items() if isinstance(v, (int, float))),
-            key=lambda x: x[1], reverse=True,
-        )[:3]
-        if top_months:
-            lines.append(
-                "最活跃月份: " + " · ".join(f"{m}月({c}次)" for m, c in top_months)
-            )
-        song_counts = review.get("player_most_uploaded_songs") or {}
-        top_songs = sorted(
-            ((str(k), int(v)) for k, v in song_counts.items() if isinstance(v, (int, float))),
-            key=lambda x: x[1], reverse=True,
-        )[:3]
-        if top_songs:
-            parts: list[str] = []
-            for sid, count in top_songs:
-                lxns_song, _ = await self._music.find_lxns_song(sid)
-                title = _html.escape(str((lxns_song or {}).get("title", sid)))
-                parts.append(f"{title}({count}次)")
-            lines.append("打最多: " + " · ".join(parts))
-        return "\n".join(lines)
-
     @Command(
         "mai_lxns_collections",
         description="查看落雪收藏品（称号/头像等）",
@@ -365,13 +410,51 @@ class LxnsCommandsMixin(SharedHelpersMixin):
         if not ok:
             await self.ctx.send.text(err, stream_id)
             return False, "获取失败", True
+        player = data.get("player") or {}
+        collections = data.get("collections") or {}
+
+        # 预取实物图：当前装备 4 件 + 每类拥有列表前 6 个
+        asset_urls: list[tuple[str, str]] = []
+        for key, ctype in (
+            ("icon", "icon"), ("name_plate", "plate"),
+            ("frame", "frame"), ("trophy", "trophy"),
+        ):
+            equip = player.get(key)
+            if isinstance(equip, dict) and equip.get("id") is not None:
+                asset_urls.append((
+                    key,
+                    LxnsApiClient.get_collection_url(
+                        self._lxns.asset_url, ctype, int(equip["id"]),
+                    ),
+                ))
+        for ctype in ("trophies", "icons", "plates", "frames"):
+            for c in (collections.get(ctype) or [])[:6]:
+                if isinstance(c, dict) and c.get("id") is not None:
+                    asset_urls.append((
+                        f"{ctype}_{c['id']}",
+                        LxnsApiClient.get_collection_url(
+                            self._lxns.asset_url,
+                            ctype.rstrip("s"),
+                            int(c["id"]),
+                        ),
+                    ))
+        results = await asyncio.gather(
+            *(self._covers.get_image_data_url(url) for _, url in asset_urls),
+            return_exceptions=True,
+        )
+        asset_map: dict[str, str] = {}
+        for (key, _), res in zip(asset_urls, results):
+            if isinstance(res, str) and res:
+                asset_map[key] = res
+
         await self.ctx.send.text("正在生成收藏品图片，请稍候...", stream_id)
         ok = await self._render_and_send(
             stream_id,
             lambda: render_collections(
                 self._renderer,
-                data["player"],
-                data.get("collections") or {},
+                player,
+                collections,
+                asset_map,
             ),
             "收藏品图片生成失败",
         )
@@ -407,6 +490,113 @@ class LxnsCommandsMixin(SharedHelpersMixin):
         lines.append("策略：成绩只升不降——缺失补齐、更高覆盖、相同或更低不动。")
         await self.ctx.send.text("\n".join(lines), stream_id)
         return True, "同步完成", True
+
+    @Command(
+        "mai_df_upload",
+        description="把落雪成绩同步上传到水鱼（反向同步，只升不降）",
+        pattern=r"^/mai df upload$",
+    )
+    async def handle_df_upload(self, stream_id: str = "", **kwargs: Any) -> tuple:
+        user_id = self._get_user_id(kwargs)
+        await self._track_user(stream_id, user_id)
+        ok, data, err = await self._players.upload_lxns_to_df(user_id)
+        if not ok:
+            await self.ctx.send.text(err, stream_id)
+            return False, "上传失败", True
+        lines = [
+            "【落雪 → 水鱼 成绩同步】",
+            f"落雪成绩: {data['total']} 条",
+            f"成功映射: {data['mapped']} 条",
+            f"新增: {data['new']} 条",
+            f"更高成绩覆盖: {data['upgraded']} 条",
+            f"相同/更低跳过: {data['unchanged']} 条",
+            f"已上传: {data['uploaded']} 条",
+            f"跳过（无法映射）: {data['skipped']} 条",
+        ]
+        if data.get("errors"):
+            lines.append("")
+            lines.append("⚠ 部分批次失败:")
+            lines.extend(data["errors"][:5])
+        lines.append("")
+        lines.append("策略：成绩只升不降——缺失补齐、更高覆盖、相同或更低不动。")
+        await self.ctx.send.text("\n".join(lines), stream_id)
+        return True, "同步完成", True
+
+    # ---- 单曲最佳（好友码走开发者 API，否则用绑定账号）----
+
+    @Command(
+        "mai_lxns_best",
+        description="查看单曲所有谱面最佳成绩（落雪）",
+        pattern=r"^/mai lxns best(?:\s+(?P<fc>\d{12,}))?\s+(?P<keyword>.+)$",
+    )
+    async def handle_lxns_best(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        user_id = self._get_user_id(kwargs)
+        await self._track_user(stream_id, user_id)
+        groups = matched_groups or {}
+        keyword = groups.get("keyword", "").strip()
+        fc = groups.get("fc", "").strip()
+        if not keyword:
+            await self.ctx.send.text(
+                "用法: /mai lxns best <曲名/ID> 或 /mai lxns best <好友码> <曲名/ID>",
+                stream_id,
+            )
+            return False, "参数错误", True
+        ok, data, err = await self._players.get_lxns_best(user_id, keyword, fc)
+        if not ok:
+            await self.ctx.send.text(err, stream_id)
+            return False, "获取失败", True
+        rows = data.get("rows") or []
+        if not rows:
+            await self.ctx.send.text(f"「{data['title']}」暂无最佳成绩", stream_id)
+            return False, "无记录", True
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_best(self._renderer, data["title"], rows),
+            "最佳成绩图片生成失败",
+        )
+        return ok, "显示最佳成绩", True
+
+    # ---- 按 QQ 查玩家（开发者模式）----
+
+    @Command(
+        "mai_lxns_qq",
+        description="按 QQ 号查询落雪玩家资料（开发者模式）",
+        pattern=r"^/mai lxns qq\s+(?P<qq>\d+)$",
+    )
+    async def handle_lxns_qq(
+        self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
+    ) -> tuple:
+        user_id = self._get_user_id(kwargs)
+        await self._track_user(stream_id, user_id)
+        qq = (matched_groups or {}).get("qq", "").strip()
+        ok, data, err = await self._players.get_lxns_player_by_qq(user_id, qq)
+        if not ok:
+            await self.ctx.send.text(err, stream_id)
+            return False, "查询失败", True
+        player = data.get("player") or {}
+        assets: dict[str, str] = {}
+        icon = player.get("icon")
+        if isinstance(icon, dict) and icon.get("id"):
+            url = LxnsApiClient.get_icon_url(
+                self._lxns.asset_url, int(icon["id"]),
+            )
+            avatar = await self._covers.get_image_data_url(url)
+            if avatar:
+                assets["avatar"] = avatar
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_player(
+                self._renderer,
+                player,
+                data.get("username", ""),
+                "lxns",
+                assets,
+            ),
+            "玩家资料图片生成失败",
+        )
+        return ok, "显示玩家资料", True
 
     # ---- 评论（OAuth 专属）----
 

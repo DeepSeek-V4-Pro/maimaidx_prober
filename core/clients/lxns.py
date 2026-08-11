@@ -93,8 +93,11 @@ class LxnsApiClient:
                     text = await resp.text()
                     return self._error(f"响应不是 JSON: {text[:200]}", resp.status)
                 if resp.status >= 400:
-                    message = str(data.get("message") or data.get("error_description")
-                                  or data.get("error") or data)
+                    message = (
+                        str(data.get("message") or data.get("error_description")
+                           or data.get("error") or data)
+                        if isinstance(data, dict) else str(data)
+                    )
                     return self._error(message, resp.status)
                 return data
         except asyncio.TimeoutError:
@@ -136,6 +139,15 @@ class LxnsApiClient:
     def get_icon_url(asset_url: str, icon_id: int) -> str:
         """玩家头像静态图 URL（GET /maimai/icon/{icon_id}.png 实测可用）。"""
         return f"{asset_url.rstrip('/')}/maimai/icon/{int(icon_id)}.png"
+
+    @staticmethod
+    def get_collection_url(asset_url: str, collection_type: str, collection_id: int) -> str:
+        """收藏品实物图 URL（trophy / icon / plate / frame）。"""
+
+        return (
+            f"{asset_url.rstrip('/')}/maimai/{collection_type}/"
+            f"{int(collection_id)}.png"
+        )
 
     @property
     def asset_url(self) -> str:
@@ -243,8 +255,25 @@ class LxnsApiClient:
             auth=auth,
         )
 
-    async def get_user_bests(self, auth: dict[str, str]) -> dict:
-        return await self._get("/user/maimai/player/bests", auth=auth)
+    async def get_user_bests(
+        self,
+        auth: dict[str, str],
+        song_id: Optional[int] = None,
+        song_type: str = "",
+        level_index: Optional[int] = None,
+    ) -> dict:
+        """Best 构成；带 song_id 时返回单曲所有谱面成绩。"""
+
+        params: dict[str, str] = {}
+        if song_id is not None:
+            params["song_id"] = str(song_id)
+        if song_type:
+            params["song_type"] = song_type
+        if level_index is not None:
+            params["level_index"] = str(level_index)
+        return await self._get(
+            "/user/maimai/player/bests", params=params, auth=auth,
+        )
 
     async def get_user_heatmap(self, auth: dict[str, str]) -> dict:
         return await self._get("/user/maimai/player/heatmap", auth=auth)
@@ -374,6 +403,13 @@ class LxnsApiClient:
     ) -> dict:
         return await self._get(f"/maimai/player/{friend_code}", auth=auth)
 
+    async def get_player_by_qq(
+        self, qq: str, auth: dict[str, str],
+    ) -> dict:
+        """通过查分器绑定的 QQ 号查询玩家信息（开发者 API）。"""
+
+        return await self._get(f"/maimai/player/qq/{qq}", auth=auth)
+
     async def get_player_bests(
         self,
         friend_code: int,
@@ -398,6 +434,15 @@ class LxnsApiClient:
             f"/maimai/player/{friend_code}/bests",
             params=params,
             auth=auth,
+        )
+
+    async def get_player_ap_bests(
+        self, friend_code: int, auth: dict[str, str],
+    ) -> dict:
+        """All Perfect 50（开发者 API 专属，响应结构同 Best 50）。"""
+
+        return await self._get(
+            f"/maimai/player/{friend_code}/bests/ap", auth=auth,
         )
 
     async def get_player_heatmap(

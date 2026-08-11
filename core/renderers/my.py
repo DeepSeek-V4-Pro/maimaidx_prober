@@ -22,7 +22,7 @@ async def render_my(
 ) -> str:
     seen_sd: set[str] = set()
     seen_dx: set[str] = set()
-    best_per_song: dict[str, dict] = {}
+    best_per_song: dict[tuple[str, str], dict] = {}
     for r in records:
         if not isinstance(r, dict):
             continue
@@ -38,8 +38,9 @@ async def render_my(
             seen_sd.add(sid)
         else:
             seen_dx.add(sid)
-        if sid not in best_per_song or ra > best_per_song[sid]["ra"]:
-            best_per_song[sid] = {"level_index": r.get("level_index", 0), "ra": ra, "record": r}
+        key = (sid, tp)
+        if key not in best_per_song or ra > best_per_song[key]["ra"]:
+            best_per_song[key] = {"level_index": r.get("level_index", 0), "ra": ra, "record": r}
 
     total = len(best_per_song)
     sd_count = len(seen_sd)

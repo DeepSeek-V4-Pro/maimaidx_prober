@@ -20,6 +20,10 @@ class PluginSectionConfig(PluginConfigBase):
         default=25500,
         description="B50 头部显示的游戏版本（如 25500=舞萌DX 2026），决定版本图标素材",
     )
+    developer_qq: list[int] = Field(
+        default_factory=list,
+        description="允许使用开发者凭证（落雪/水鱼）的 QQ 号列表；为空时任何 QQ 都无法使用开发者功能",
+    )
 
 
 class ServerConfig(PluginConfigBase):
@@ -32,6 +36,10 @@ class ServerConfig(PluginConfigBase):
     )
     request_timeout: int = Field(default=30, description="请求超时时间(秒)")
     music_cache_ttl: int = Field(default=300, description="曲库缓存时间(秒)")
+    developer_token: str = Field(
+        default="",
+        description="水鱼开发者 API 密钥（/mai plate 按版本查询成绩用；在水鱼开发者面板申请）",
+    )
 
 
 class LxnsServerConfig(PluginConfigBase):

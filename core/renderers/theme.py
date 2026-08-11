@@ -223,7 +223,7 @@ body{{
 .grid{{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}}
 .score-card{{
   position:relative;display:flex;border-radius:15px;overflow:hidden;
-  min-height:112px;
+  min-height:126px;
   box-shadow:0 4px 12px rgba(80,30,120,.22);
 }}
 .score-card::before{{
@@ -250,9 +250,21 @@ body{{
 .dx-star{{height:20px;width:auto;display:block;flex:none}}
 .card-ach{{font-size:22px;font-weight:800;color:#FFFFFF;line-height:1.15}}
 .card-stats{{display:flex;gap:12px;font-size:14px;color:{c['card_text']};opacity:.95}}
+.card-stats .card-lv{{color:#FFE9A8;font-weight:800}}
+.card-time{{font-size:11px;color:{c['card_text']};opacity:.8;margin-top:2px}}
 .card-badges{{display:flex;gap:5px;align-items:center;margin-top:auto}}
 .badge-rate{{height:32px;width:auto;display:block}}
 .badge-medal{{height:30px;width:auto;display:block}}
+.card-placeholder{{
+  align-items:center;justify-content:center;
+  background:rgba(255,255,255,.30);border:2px dashed rgba(120,80,160,.35);
+  box-shadow:none;min-height:126px;
+}}
+.card-placeholder::before{{display:none}}
+.card-placeholder .ph-text{{
+  width:100%;text-align:center;color:rgba(120,80,160,.55);
+  font-size:15px;font-weight:700;letter-spacing:2px;
+}}
 .type-tag{{
   position:absolute;top:10px;right:10px;z-index:3;
   display:inline-flex;align-items:center;
@@ -469,6 +481,8 @@ def score_card_html(
     level: str = "",
     level_index: int = 2,
     dx_star: Any = None,
+    level_text: str = "",
+    play_time: str = "",
 ) -> str:
     """官方版式成绩卡片：文字居左、曲绘居右、右下编号框。"""
     b15 = " b15" if section == "dx" else ""
@@ -487,6 +501,16 @@ def score_card_html(
         badges.append(f'<img class="badge-medal" src="{fs_uri}" />')
     badges_html = f'<div class="card-badges">{"".join(badges)}</div>' if badges else ""
     level_tag = f'<span class="type-tag">{_html.escape(level)}</span>' if level else ""
+    lv_html = (
+        f'<span class="card-lv">Lv.{_html.escape(level_text)}</span>'
+        if level_text
+        else ""
+    )
+    time_html = (
+        f'<div class="card-time">{_html.escape(play_time)}</div>'
+        if play_time
+        else ""
+    )
     star_uri = ""
     try:
         star_val = int(dx_star)
@@ -504,13 +528,24 @@ def score_card_html(
         f"{star_html}{level_tag}"
         "</div>"
         f'<div class="card-ach">{_html.escape(achievements)}</div>'
-        f'<div class="card-stats"><span>DS {ds}</span><span>RA {ra}</span></div>'
+        f'<div class="card-stats"><span>DS {ds}</span><span>RA {ra}</span>{lv_html}</div>'
         f"{badges_html}"
+        f"{time_html}"
         "</div>"
         '<div class="card-cover">'
         f'<img src="{cover_url}" onerror="this.style.display=\'none\'" />'
         "</div>"
         f'<div class="card-rank">#{rank}</div>'
+        "</div>"
+    )
+
+
+def placeholder_card_html() -> str:
+    """「未游玩」占位卡，用于补齐 BEST 35 / BEST 15 网格。"""
+
+    return (
+        '<div class="score-card card-placeholder">'
+        '<div class="ph-text">未游玩</div>'
         "</div>"
     )
 

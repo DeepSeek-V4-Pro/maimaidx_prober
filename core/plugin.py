@@ -157,6 +157,7 @@ class MaiMaiDXPlugin(
                 self.config.server.base_url,
                 self.config.server.request_timeout,
                 self._http_session,
+                developer_token=self.config.server.developer_token,
             )
             self._lxns = LxnsApiClient(
                 self.config.lxns.base_url,
@@ -183,6 +184,8 @@ class MaiMaiDXPlugin(
                 self._bindings,
                 self._music,
                 game_version=getattr(self.config.plugin, "game_version", 25500),
+                df_developer_token=self.config.server.developer_token,
+                developer_qq=self.config.plugin.developer_qq,
             )
             self._covers = CoverService(
                 self._http_session,

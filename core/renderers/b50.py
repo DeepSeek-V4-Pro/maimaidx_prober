@@ -13,13 +13,14 @@ from typing import Any
 from ..assets import maimai_icon, maimai_rank
 from ..constants import DEFAULT_GAME_VERSION
 from ..services.renderer import HtmlRenderer
-from ..util import safe_float
+from ..util import fmt_utc, safe_float
 from .common import safe_str
 from .theme import (
     doc,
     footer_html,
     header_html,
     page_style,
+    placeholder_card_html,
     score_card_html,
     section_html,
 )
@@ -53,7 +54,9 @@ async def render_b50(
     sd = charts.get("sd", []) or []
     dx = charts.get("dx", []) or []
 
-    def _cards_html(recs: list[dict], section_key: str) -> str:
+    def _cards_html(
+        recs: list[dict], section_key: str, total_slots: int,
+    ) -> str:
         parts = []
         for i, r in enumerate(recs):
             title = safe_str(r.get("title"), "???")
@@ -84,8 +87,15 @@ async def render_b50(
                     level=tp,
                     level_index=r.get("level_index", 2),
                     dx_star=r.get("dx_star"),
+                    level_text=r.get("level", ""),
+                    play_time=fmt_utc(
+                        r.get("play_time") or r.get("last_played_time")
+                    ),
                 )
             )
+        # 不满整行时补「未游玩」占位卡，保证 BEST 35 / BEST 15 网格完整
+        for _ in range(len(recs), total_slots):
+            parts.append(placeholder_card_html())
         return "".join(parts)
 
     body = (
@@ -100,16 +110,16 @@ async def render_b50(
             course_rank=course_rank,
             class_rank=class_rank,
         )
-        + section_html("BEST 35", _cards_html(sd, "sd"))
-        + section_html("BEST 15", _cards_html(dx, "dx"))
+        + section_html("BEST 35", _cards_html(sd, "sd", 35))
+        + section_html("BEST 15", _cards_html(dx, "dx", 15))
         + footer_html(f"查询时间: {_html.escape(query_time)}", "数据来源: maimai")
         + "</div>"
     )
 
-    sd_rows = (len(sd) + 4) // 5 if sd else 0
-    dx_rows = (len(dx) + 4) // 5 if dx else 0
+    sd_rows = 7  # BEST 35 固定 7 行（不足补占位卡）
+    dx_rows = 3  # BEST 15 固定 3 行
     total_rows = sd_rows + dx_rows
-    card_h = 112
+    card_h = 126
     header_h = 232
     section_extra = 132  # 分区条 + 内边距 + 外边距
     row_gap = 16

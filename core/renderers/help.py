@@ -13,6 +13,8 @@ async def render_help(renderer: HtmlRenderer) -> str:
           ("/mai today", "今日运势 — 随机推荐歌曲"),
           ("/mai maidle", "猜歌游戏 (Maidle)"),
           ("/mai charts", "全谱面难度分布统计"),
+          ("/mai hot [N]", "热门歌曲 TOP N"),
+          ("/mai ranking [N]", "DX Rating 排行榜 TOP N"),
           ("/mai status", "服务器状态检测 (双服)"),
           ("/mai pick <A> <B> [C] [D]", "随机帮你选一个"),
           ("/mai help", "显示本帮助")]),
@@ -25,13 +27,16 @@ async def render_help(renderer: HtmlRenderer) -> str:
          [("/mai b50 [用户] [--lxns|--df]", "Best 50 图片；可强制指定数据源"),
           ("/mai my [--lxns|--df]", "个人成绩摘要；可强制指定数据源"),
           ("/mai bind <Token>", "绑定成绩导入 Token"),
-          ("/mai unbind", "解除绑定")]),
+          ("/mai unbind", "解除绑定"),
+          ("/mai plate <版本> [用户]", "按版本查询成绩（需水鱼 Developer-Token）")]),
         ("落雪账号 (/mai lxns)",
          [("/mai lxns bind", "OAuth 授权绑定落雪账号"),
           ("/mai lxns bind token <密钥>", "用个人 API 密钥绑定"),
           ("/mai lxns bind code <授权码>", "用授权码完成 OAuth 绑定"),
           ("/mai lxns unbind", "解除落雪绑定"),
           ("/mai lxns status", "查看绑定状态"),
+          ("/mai lxns player [好友码]", "玩家资料卡"),
+          ("/mai lxns ap50 <好友码>", "All Perfect 50（开发者模式）"),
           ("/mai lxns heatmap", "上传热力图"),
           ("/mai lxns trend [版本]", "DX Rating 趋势"),
           ("/mai lxns history <曲名>", "单曲游玩历史"),
@@ -39,9 +44,12 @@ async def render_help(renderer: HtmlRenderer) -> str:
           ("/mai lxns year [年份]", "年度回顾"),
           ("/mai lxns collections", "收藏品（称号/头像等）"),
           ("/mai lxns upload", "水鱼成绩同步到落雪（只升不降）"),
+          ("/mai df upload", "落雪成绩同步到水鱼（反向，只升不降）"),
+          ("/mai lxns best [好友码] <曲名>", "单曲所有谱面最佳成绩"),
+          ("/mai lxns qq <QQ号>", "按 QQ 查玩家资料（开发者模式）"),
           ("/mai lxns comment list <曲名>", "查看曲目评论（服务端未开放时不可用）")]),
     ]
-    style = ".cmd-name{width:380px;font-size:20px}.cmd-desc{font-size:20px}"
+    style = ".cmd-name{width:380px;font-size:18px}.cmd-desc{font-size:18px}"
     body = (
         '<div class="panel">'
         '<div class="p-title">MaiMai DX 查分器</div>'
@@ -50,7 +58,7 @@ async def render_help(renderer: HtmlRenderer) -> str:
         + footer_bar("数据来源: maimai")
         + "</div>"
     )
-    return await renderer.render(doc(panel_style(style), body), width=1060, height=940)
+    return await renderer.render(doc(panel_style(style), body), width=1080, height=1040)
 
 
 async def render_maidle_help(renderer: HtmlRenderer) -> str:
