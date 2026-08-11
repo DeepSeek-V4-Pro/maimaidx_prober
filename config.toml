@@ -1,7 +1,8 @@
 [plugin]
 enabled = true
-config_version = "2.0.0"
+config_version = "3.0.0"
 auto_install_deps = false
+game_version = 25500
 
 [server]
 base_url = "https://www.diving-fish.com/api/maimaidxprober"
@@ -14,6 +15,14 @@ base_url = "https://maimai.lxns.net/api/v0"
 asset_url = "https://assets.lxns.net"
 request_timeout = 30
 music_cache_ttl = 300
+enable_oauth = false
+oauth_client_id = ""
+oauth_client_secret = ""
+oauth_authorize_url = "https://maimai.lxns.net/oauth/authorize"
+oauth_redirect_uri = ""
+oauth_scope = "read_player write_player read_user_profile"
+enable_developer_api = false
+developer_api_key = ""
 
 [render]
 device_scale_factor = 2.0

@@ -13,6 +13,9 @@ FS_DISPLAY: dict[str, str] = {
 }
 DIFF_NAMES = ["Basic", "Advanced", "Expert", "Master", "Re:Master"]
 
+DEFAULT_GAME_VERSION = 25500
+GAME_VERSION_KEYS = {20000, 21000, 22000, 23000, 24000, 25000, 25500}
+
 BASE_HTML_STYLE = (
     "*{margin:0;padding:0;box-sizing:border-box}"
     "body{background:linear-gradient(180deg,#1c1c30 0%,#222240 100%);"

@@ -23,9 +23,6 @@ class SharedHelpersMixin:
                     self._stream_users.popitem(last=False)
             self._stream_users[stream_id] = user_id
 
-    def _get_tool_user_id(self, stream_id: str) -> str:
-        return self._stream_users.get(stream_id, stream_id)
-
     async def _get_binding(self, kwargs: dict) -> Optional[dict[str, Any]]:
         user_id = self._get_user_id(kwargs)
         if not user_id:

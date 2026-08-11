@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "version": "2.0.0",
+  "version": "3.0.0",
   "name": "MaiMai DX 双源查分器",
-  "description": "连接 diving-fish（水鱼）与 lxns（落雪）公开接口的舞萌 DX 查分插件，支持 B50 图片、曲目搜索（含别称与 lxns 数据补全）、猜歌游戏、谱面统计、运势、收藏品与个人成绩查询",
+  "description": "舞萌 DX 双源查分插件：diving-fish（水鱼）查分 + lxns（落雪）账号接入（OAuth/个人密钥/开发者密钥），支持 B50、个人成绩、热力图、趋势、历史、排行、年度回顾、收藏品、成绩同步上传、猜歌与运势",
   "author": {
     "name": "DeepSeek-V4",
     "url": "https://github.com/DeepSeek-V4-Pro"

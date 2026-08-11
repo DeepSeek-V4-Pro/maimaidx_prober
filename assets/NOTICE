@@ -1,0 +1,15 @@
+Assets in this directory are bundled from maimai-prober-frontend:
+  https://github.com/LxNS/maimai-prober-frontend
+
+Copyright (c) 2026 Lxns-Network
+Licensed under the MIT License.
+
+The game badge/icon assets (maimai / CHUNITHM) are official assets of
+SEGA and are used here for informational display in player score
+renderings. All game names, logos and badges remain the property of
+their respective owners.
+
+The bundled font "Varela Round" (assets/fonts/) is licensed under the
+SIL Open Font License 1.1 (see assets/fonts/OFL.txt), Copyright 2023
+The Varela Round Project Authors, Reserved Font Names 'Varela' and
+'Varela Round'.

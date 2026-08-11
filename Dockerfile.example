@@ -8,8 +8,8 @@ FROM ghcr.io/sanwuya/maibot:latest
 
 # 预装 Python 依赖（避免容器重建后手动 pip install）
 RUN pip install --no-cache-dir \
-    aiohttp>=3.8 \
-    playwright>=1.40
+    "aiohttp>=3.8" \
+    "playwright>=1.40"
 
 # 预装 Chromium（用于图片渲染；约 300MB）
 RUN python -m playwright install --with-deps chromium

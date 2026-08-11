@@ -35,6 +35,7 @@ class MusicService:
         self._lxns_song_cache: Optional[dict] = None
         self._lxns_song_cache_time: float = 0.0
         self._lxns_by_id: dict[int, dict] = {}
+        self._df_by_lxns_id: dict[int, dict] = {}
 
     def invalidate(self) -> None:
         self._song_cache = None
@@ -44,6 +45,7 @@ class MusicService:
         self._lxns_song_cache = None
         self._lxns_song_cache_time = 0.0
         self._lxns_by_id = {}
+        self._df_by_lxns_id = {}
 
     # ---- 水鱼曲库 ----
 
@@ -114,8 +116,57 @@ class MusicService:
                     seen_ids.add(sid)
                     results.append(music)
 
-        results.sort(key=lambda m: int(str(m.get("id", "0") or "0")))
+        def _sort_key(m: dict) -> int:
+            try:
+                return int(str(m.get("id", "0") or "0"))
+            except (TypeError, ValueError):
+                return 0
+
+        results.sort(key=_sort_key)
         return results
+
+    async def find_lxns_song(
+        self, keyword: str,
+    ) -> tuple[Optional[dict], str]:
+        """按关键词/ID 解析落雪曲目，返回 (lxns_song, 错误信息)。
+
+        优先用 ID 直查（含水鱼 ID −10000 的候选），再用水鱼曲库匹配
+        标题交叉确认，最后退回落雪曲库标题子串搜索。
+        """
+
+        cache = await self._get_lxns_cache()
+        if not cache:
+            return None, "落雪曲库不可用"
+        if not self._lxns_by_id:
+            self._rebuild_lxns_index()
+
+        keyword = keyword.strip()
+        if keyword.isdigit():
+            sid_int = int(keyword)
+            direct = self._lxns_by_id.get(sid_int)
+            if direct is not None:
+                return direct, ""
+            alt = sid_int - 10000
+            if alt > 0 and alt in self._lxns_by_id:
+                return self._lxns_by_id[alt], ""
+
+        matches = await self.match_songs(keyword)
+        for m in matches:
+            try:
+                mid = int(m.get("id", 0))
+            except (TypeError, ValueError):
+                continue
+            if not mid:
+                continue
+            lxns_song = self._find_lxns_song(mid, m.get("title"))
+            if lxns_song:
+                return lxns_song, ""
+
+        kw = keyword.lower()
+        for s in self._lxns_by_id.values():
+            if kw in str(s.get("title", "") or "").lower():
+                return s, ""
+        return None, f"未找到曲目: {keyword}"
 
     # ---- lxns 公开数据补全 ----
 
@@ -144,6 +195,39 @@ class MusicService:
                     self._lxns_by_id[int(s["id"])] = s
                 except (TypeError, ValueError):
                     continue
+
+    def _rebuild_df_by_lxns_index(self, songs: list[dict]) -> None:
+        """构建 落雪歌曲 ID → 水鱼歌曲 的反向索引。
+
+        两个查分器 ID 体系：老曲 lxns id == 水鱼 id，新曲 lxns id == 水鱼 id − 10000。
+        """
+
+        self._df_by_lxns_id = {}
+        for music in songs:
+            if not isinstance(music, dict):
+                continue
+            try:
+                sid = int(music.get("id", 0))
+            except (TypeError, ValueError):
+                continue
+            if not sid:
+                continue
+            # 老曲：lxns id == 水鱼 id
+            self._df_by_lxns_id[sid] = music
+            # 新曲：lxns id == 水鱼 id − 10000
+            alt = sid - 10000
+            if alt > 0:
+                self._df_by_lxns_id.setdefault(alt, music)
+
+    async def get_df_song_by_lxns_id(self, lxns_id: int) -> Optional[dict]:
+        """按落雪歌曲 ID 反查水鱼曲目（用于补定数、封面 ID、成绩上传映射）。"""
+
+        if not self._df_by_lxns_id:
+            songs = self._song_cache or await self.get_songs()
+            if not songs:
+                return None
+            self._rebuild_df_by_lxns_index(songs)
+        return self._df_by_lxns_id.get(int(lxns_id))
 
     def _find_lxns_song(self, song_id: int, title: Any) -> Optional[dict]:
         """按水鱼歌曲 ID 在 lxns 曲库中匹配对应歌曲。

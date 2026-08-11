@@ -11,7 +11,7 @@ from typing import Any
 from maibot_sdk import Command, Tool
 
 from ..constants import BLESSINGS, PICK_PHRASES
-from ..renderers import render_help, render_song_detail, render_today
+from ..renderers import render_help, render_pick, render_song_detail, render_status, render_today
 from ..util import error_msg, format_music_summary, is_error, stable_user_uid
 from .base import SharedHelpersMixin
 
@@ -73,13 +73,13 @@ class BasicCommandsMixin(SharedHelpersMixin):
             )
             return False, "选项无效", True
         chosen = random.choice(opts)
-        opts_display = "\n".join(f"  {i}. {_html.escape(o)}" for i, o in enumerate(opts, 1))
-        phrase = random.choice(PICK_PHRASES).format(choice=_html.escape(chosen), count=len(opts))
-        await self.ctx.send.text(
-            f"【ソルト帮你选】\n\n{opts_display}\n\n{phrase}",
+        phrase = random.choice(PICK_PHRASES).format(choice=chosen, count=len(opts))
+        ok = await self._render_and_send(
             stream_id,
+            lambda: render_pick(self._renderer, opts, chosen, phrase),
+            "选择图片生成失败",
         )
-        return True, "随机选择", True
+        return ok, "随机选择", True
 
     # ---- 曲目搜索 ----
 
@@ -233,6 +233,8 @@ class BasicCommandsMixin(SharedHelpersMixin):
                 except (TypeError, ValueError):
                     ach = 0.0
                 fc_dist = d.get("fc_dist", [0, 0, 0, 0, 0])
+                if not isinstance(fc_dist, list) or len(fc_dist) < 5:
+                    fc_dist = [0, 0, 0, 0, 0]
                 total = sum(fc_dist) if fc_dist else 1
                 ap_rate = ((fc_dist[3] + fc_dist[4]) / total * 100) if total > 0 else 0
                 fc_rate = ((sum(fc_dist[1:])) / total * 100) if total > 0 else 0
@@ -254,24 +256,28 @@ class BasicCommandsMixin(SharedHelpersMixin):
     )
     async def handle_status(self, stream_id: str = "", **kwargs: Any) -> tuple:
         await self._track_user(stream_id, self._get_user_id(kwargs))
-        lines = []
+        results: list[tuple[str, bool, str]] = []
         resp = await self._df.alive_check()
         if is_error(resp):
-            lines.append(f"diving-fish: 异常 ({error_msg(resp)})")
+            results.append(("diving-fish", False, error_msg(resp)))
         elif isinstance(resp, dict) and resp.get("message") == "ok":
-            lines.append("diving-fish: 正常 ✅")
+            results.append(("diving-fish", True, "API 正常"))
         else:
-            lines.append("diving-fish: 未知")
+            results.append(("diving-fish", False, "未知状态"))
         if self._lxns is not None:
             lxns_resp = await self._lxns.alive_check()
             if self._lxns._is_error(lxns_resp):
-                lines.append(f"lxns: 异常 ({lxns_resp.get('message', '')})")
+                results.append(("lxns", False, lxns_resp.get("message", "")))
             else:
-                lines.append("lxns: 正常 ✅")
+                results.append(("lxns", True, "API 正常"))
         else:
-            lines.append("lxns: 未启用")
-        await self.ctx.send.text("\n".join(lines), stream_id)
-        return True, "状态检测", True
+            results.append(("lxns", False, "未启用"))
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_status(self._renderer, results),
+            "状态图片生成失败",
+        )
+        return ok, "状态检测", True
 
     # ---- 今日运势 ----
 

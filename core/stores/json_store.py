@@ -44,3 +44,10 @@ class JsonStore:
     async def all(self) -> dict[str, Any]:
         async with self._lock:
             return dict(self._data)
+
+    async def replace_all(self, data: dict[str, Any]) -> None:
+        """整体替换存储内容（用于数据目录迁移）。"""
+
+        async with self._lock:
+            self._data = dict(data)
+            await self._save()

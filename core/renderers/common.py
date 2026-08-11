@@ -5,6 +5,7 @@ import html as _html
 from typing import Any
 
 from ..constants import BASE_HTML_STYLE
+from .theme import font_face_css, FONT_STACK
 
 
 def doc(style_extra: str, body: str) -> str:
@@ -12,6 +13,8 @@ def doc(style_extra: str, body: str) -> str:
     return (
         "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><style>"
         + BASE_HTML_STYLE
+        + font_face_css()
+        + f"body{{font-family:{FONT_STACK}}}"
         + style_extra
         + "</style></head><body>"
         + body
@@ -30,7 +33,7 @@ def cmd_section(label: str, cmds: list[tuple[str, str]], name_width: str = "380p
     )
 
 
-def footer_bar(left: str = "数据来源: diving-fish", right: str = "MaiBot") -> str:
+def footer_bar(left: str = "数据来源: maimai", right: str = "MaiBot") -> str:
     return (
         '<div class="footer-bar">'
         f'<span class="footer-source">{_html.escape(left)}</span>'

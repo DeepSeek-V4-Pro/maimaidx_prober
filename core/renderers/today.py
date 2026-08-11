@@ -10,6 +10,7 @@ from typing import Optional
 
 from ..services.renderer import HtmlRenderer
 from .common import doc, safe_str
+from .theme import panel_style
 
 
 async def render_today(
@@ -41,31 +42,34 @@ async def render_today(
     )
 
     style = (
-        "body{padding:36px 48px}"
-        ".header{text-align:center;margin-bottom:40px}"
-        ".header h2{font-size:36px;color:#d0d0e0;margin-bottom:14px;letter-spacing:3px}"
-        f".header .rp{{font-size:64px;font-weight:700;color:{rp_color}}}"
-        ".section{margin:28px 0}"
-        ".section .label{font-size:20px;color:#8888a8;margin-bottom:6px}"
-        ".section .value{font-size:22px;color:#c8c8d8}"
-        ".sep{border-top:1px solid #333350;margin:32px 0}"
-        ".rec{display:flex;gap:32px;align-items:flex-start}"
-        ".rec .cover{flex-shrink:0;width:220px;height:220px;border-radius:10px;overflow:hidden;border:2px solid #444460;box-shadow:0 2px 8px rgba(0,0,0,.3)}"
+        ".yi-ji{display:flex;gap:16px;margin:16px 0}"
+        ".yi-ji .box{flex:1;background:#FFFFFF;border-radius:14px;padding:14px 18px;box-shadow:0 3px 10px rgba(120,80,160,.1)}"
+        ".yi-ji .label{font-size:16px;font-weight:700;margin-bottom:6px}"
+        ".yi-ji .yi .label{color:#3BA55D}"
+        ".yi-ji .ji .label{color:#D9534F}"
+        ".yi-ji .value{font-size:18px;color:#4A3B63}"
+        ".sep{border-top:1px solid #EFE6F7;margin:22px 0}"
+        ".rec{display:flex;gap:26px;align-items:flex-start}"
+        ".rec .cover{flex-shrink:0;width:210px;height:210px;border-radius:14px;overflow:hidden;border:2px solid #EFE6F7;box-shadow:0 4px 14px rgba(120,80,160,.16)}"
         ".rec .cover img{width:100%;height:100%;object-fit:cover;display:block}"
-        ".rec .cover-missing{display:flex;align-items:center;justify-content:center;font-size:16px;color:#6868a0;background:#24243a}"
-        ".rec .info{flex:1;display:flex;flex-direction:column;gap:12px;padding-top:6px;min-width:0}"
-        ".rec .info .song{font-size:26px;color:#e4e4f0;font-weight:600;overflow-wrap:break-word}"
-        ".rec .info .artist{font-size:20px;color:#a0a0c0}"
-        ".rec .info .type-badge{font-size:15px;color:#8888b0;width:fit-content}"
-        ".rec .info .ds{font-size:18px;color:#8080a8}"
-        ".footer{margin-top:34px;text-align:center;font-size:17px;color:#6868a0}"
+        ".rec .cover-missing{display:flex;align-items:center;justify-content:center;font-size:15px;color:#8B7BA6;background:#F7F3FB}"
+        ".rec .info{flex:1;display:flex;flex-direction:column;gap:10px;padding-top:4px;min-width:0}"
+        ".rec .info .song{font-size:24px;color:#4A3B63;font-weight:800;overflow-wrap:break-word}"
+        ".rec .info .artist{font-size:17px;color:#6B5D8A}"
+        ".rec .info .type-badge{font-size:13px;font-weight:700;color:#7048E8;background:#F0EAF8;border-radius:8px;padding:2px 10px;width:fit-content}"
+        ".rec .info .ds{font-size:16px;color:#6B5D8A}"
+        ".footer{margin-top:22px;text-align:center;font-size:15px;color:#8B7BA6}"
     )
     body = (
-        f'<div class="header"><h2>今日运势</h2><div class="rp">{rp}</div></div>'
-        '<div class="section"><div class="label">宜</div>'
+        '<div class="panel">'
+        f'<div class="p-title">今日运势</div>'
+        f'<div class="p-sub">幸运指数 <span style="color:{rp_color};font-weight:800">{rp}</span> / 100</div>'
+        '<div class="yi-ji">'
+        '<div class="box yi"><div class="label">宜</div>'
         f'<div class="value">{_html.escape(yi_text)}</div></div>'
-        '<div class="section"><div class="label">忌</div>'
+        '<div class="box ji"><div class="label">忌</div>'
         f'<div class="value">{_html.escape(ji_text)}</div></div>'
+        "</div>"
         '<div class="sep"></div><div class="rec">'
         f"{cover_html}"
         '<div class="info">'
@@ -73,16 +77,18 @@ async def render_today(
         f'<div class="artist">{_html.escape(artist)}</div>'
         f'<div><span class="type-badge">{_html.escape(tp)}</span></div>'
         f'<div class="ds">定数: {_html.escape(ds_str)}</div>'
-        f'<div style="font-size:15px;color:#6868a0">ID: {_html.escape(sid)}</div>'
+        f'<div style="font-size:14px;color:#8B7BA6">ID: {_html.escape(sid)}</div>'
         "</div></div>"
         f'<div class="footer">{_html.escape(blessing)}</div>'
-        '<div style="text-align:right;margin-top:12px;font-size:12px;color:#585878">'
-        "数据来源: diving-fish &middot; MaiBot</div>"
+        '<div class="p-footer">'
+        '<span class="footer-source">数据来源: maimai</span>'
+        '<span class="footer-mai">MaiBot</span></div>'
+        "</div>"
     )
     return await renderer.render(
-        doc(style, body),
+        doc(panel_style(style), body),
         width=880,
-        height=760,
+        height=800,
         wait_images=bool(cover_data_url),
         strict_images=True,
     )

@@ -6,6 +6,7 @@ from typing import Optional
 
 from ..services.renderer import HtmlRenderer
 from .common import doc, safe_str
+from .theme import panel_style
 
 
 async def render_song_detail(
@@ -75,31 +76,27 @@ async def render_song_detail(
                 diff_rows_html += "</div>"
 
     style = (
-        "body{padding:28px 32px 14px 32px}"
-        ".header{margin-bottom:24px}"
-        ".header .type-badge{font-size:13px;color:#8888b0;margin-right:10px;vertical-align:middle}"
-        ".header .title{font-size:22px;color:#e8e8f0;font-weight:600;vertical-align:middle;letter-spacing:1px}"
-        ".header .id{font-size:13px;color:#6868a0;margin-top:6px}"
-        ".body2{display:flex;gap:28px;margin-top:20px}"
-        ".cover2{flex-shrink:0;width:200px;height:200px;border-radius:10px;overflow:hidden;border:2px solid #444460;box-shadow:0 2px 10px rgba(0,0,0,.3)}"
+        ".header{margin-bottom:18px}"
+        ".header .type-badge{font-size:13px;font-weight:700;color:#7048E8;background:#F0EAF8;border-radius:8px;padding:2px 10px;margin-right:10px;vertical-align:middle}"
+        ".header .title{font-size:22px;color:#4A3B63;font-weight:800;vertical-align:middle;letter-spacing:1px}"
+        ".header .id{font-size:13px;color:#8B7BA6;margin-top:5px}"
+        ".body2{display:flex;gap:26px;margin-top:18px}"
+        ".cover2{flex-shrink:0;width:190px;height:190px;border-radius:14px;overflow:hidden;border:2px solid #EFE6F7;box-shadow:0 4px 14px rgba(120,80,160,.16)}"
         ".cover2 img{width:100%;height:100%;object-fit:cover;display:block}"
-        ".cover2-missing{display:flex;align-items:center;justify-content:center;font-size:14px;color:#6868a0;background:#24243a}"
-        ".info{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0}"
-        ".info .row{font-size:15px;color:#c8c8d8}"
-        ".info .row .label{color:#7878a8;margin-right:8px}"
-        ".info .ds{font-size:14px;color:#9090b8;line-height:1.8}"
-        ".aliases{margin-top:22px;padding-top:14px;border-top:1px solid #333350;font-size:13px;color:#7878a0}"
-        ".diff-section{margin-top:14px}"
-        ".diff-section .sec-label{font-size:14px;color:#9090b8;margin-bottom:6px}"
-        ".diff-row{font-size:12px;color:#a0a0c0;padding:2px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}"
-        ".diff-type{color:#6868a0;font-size:11px;min-width:28px}"
-        ".diff-lvl{color:#c8c8d8;font-weight:600;min-width:80px}"
-        ".diff-kanji{color:#9090b8;font-size:11px}"
-        ".diff-designer{color:#7878a0;font-size:11px}"
-        ".diff-notes{color:#707098;font-size:11px}"
-        ".footer-bar{display:flex;align-items:center;margin-top:18px;padding-top:10px;border-top:1px solid #333350;font-size:12px}"
-        ".footer-source{color:#7878a8;flex:1;text-align:left}"
-        ".footer-mai{color:#585878;flex:1;text-align:right}"
+        ".cover2-missing{display:flex;align-items:center;justify-content:center;font-size:14px;color:#8B7BA6;background:#F7F3FB}"
+        ".info{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}"
+        ".info .row{font-size:15px;color:#4A3B63}"
+        ".info .row .label{color:#8B7BA6;margin-right:8px}"
+        ".info .ds{font-size:14px;color:#6B5D8A;line-height:1.8}"
+        ".aliases{margin-top:18px;padding-top:12px;border-top:1px solid #EFE6F7;font-size:13px;color:#6B5D8A}"
+        ".diff-section{margin-top:12px}"
+        ".diff-section .sec-label{font-size:14px;font-weight:700;color:#6B5D8A;margin-bottom:6px}"
+        ".diff-row{font-size:12px;color:#4A3B63;padding:2px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}"
+        ".diff-type{color:#A78BFA;font-size:11px;min-width:28px;font-weight:700}"
+        ".diff-lvl{color:#4A3B63;font-weight:700;min-width:80px}"
+        ".diff-kanji{color:#6B5D8A;font-size:11px}"
+        ".diff-designer{color:#8B7BA6;font-size:11px}"
+        ".diff-notes{color:#8B7BA6;font-size:11px}"
     )
     cover_html = (
         f'<div class="cover2"><img src="{cover_data_url}" /></div>'
@@ -107,6 +104,7 @@ async def render_song_detail(
         else '<div class="cover2 cover2-missing">曲绘缺失</div>'
     )
     body = (
+        '<div class="panel">'
         '<div class="header">'
         f'<div><span class="type-badge">{_html.escape(tp)}</span>'
         f'<span class="title">{_html.escape(title)}</span></div>'
@@ -124,14 +122,15 @@ async def render_song_detail(
         '<div class="diff-section"><div class="sec-label">谱面详情</div>'
         f"{diff_rows_html}</div>"
         f'<div class="aliases">别称: {_html.escape(alias_text)}</div>'
-        '<div class="footer-bar">'
-        f'<span class="footer-source">{"数据来源: lxns + diving-fish" if extra else "数据来源: diving-fish"}</span>'
+        '<div class="p-footer">'
+        '<span class="footer-source">数据来源: maimai</span>'
         '<span class="footer-mai">MaiBot</span></div>'
+        "</div>"
     )
     return await renderer.render(
-        doc(style, body),
+        doc(panel_style(style), body),
         width=680,
-        height=100,
+        height=120,
         wait_images=bool(cover_data_url),
         strict_images=True,
     )

@@ -11,10 +11,14 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_icon__ = "package"
     __ui_order__ = 0
     enabled: bool = Field(default=True, description="是否启用插件")
-    config_version: str = Field(default="2.0.0", description="配置版本")
+    config_version: str = Field(default="3.0.0", description="配置版本")
     auto_install_deps: bool = Field(
         default=False,
         description="依赖缺失时自动执行 pip 安装（默认关闭，建议手动执行 install_deps.py）",
+    )
+    game_version: int = Field(
+        default=25500,
+        description="B50 头部显示的游戏版本（如 25500=舞萌DX 2026），决定版本图标素材",
     )
 
 
@@ -45,6 +49,38 @@ class LxnsServerConfig(PluginConfigBase):
     )
     request_timeout: int = Field(default=30, description="请求超时时间(秒)")
     music_cache_ttl: int = Field(default=300, description="lxns 曲库缓存时间(秒)")
+    enable_oauth: bool = Field(
+        default=False,
+        description="是否启用落雪 OAuth 绑定功能（/mai lxns bind）",
+    )
+    oauth_client_id: str = Field(
+        default="",
+        description="落雪 OAuth 应用 ID（开发者面板创建）",
+    )
+    oauth_client_secret: str = Field(
+        default="",
+        description="落雪 OAuth 应用密钥；公共客户端可留空（走 PKCE）",
+    )
+    oauth_authorize_url: str = Field(
+        default="https://maimai.lxns.net/oauth/authorize",
+        description="OAuth 授权端点（来自 OIDC 发现文档，注意不是 /api/v0 前缀）",
+    )
+    oauth_redirect_uri: str = Field(
+        default="",
+        description="OAuth 回调地址；留空使用 OOB（授权成功后直接显示授权码）",
+    )
+    oauth_scope: str = Field(
+        default="read_player write_player read_user_profile",
+        description="OAuth 授权范围（空格分隔；需要 userinfo 时加 openid profile email）",
+    )
+    enable_developer_api: bool = Field(
+        default=False,
+        description="是否启用落雪开发者模式（好友码查询）",
+    )
+    developer_api_key: str = Field(
+        default="",
+        description="落雪开发者 API 密钥（开发者面板申请）",
+    )
 
 
 class RenderConfig(PluginConfigBase):

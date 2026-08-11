@@ -7,6 +7,7 @@ from typing import Optional
 from ..services.renderer import HtmlRenderer
 from ..util import format_maidle_test
 from .common import doc
+from .theme import panel_style
 
 
 async def render_maidle_guess(
@@ -15,22 +16,23 @@ async def render_maidle_guess(
 ) -> str:
     clues = format_maidle_test(test)
     style = (
-        ".header{text-align:center;margin-bottom:20px}"
-        ".header h2{font-size:20px;color:#e8e8f0;letter-spacing:2px;margin-bottom:4px}"
-        ".header .guess{font-size:14px;color:#7878a8}"
-        ".sep{border-top:1px solid #333350;margin:18px 0}"
-        ".clues{font-size:15px;color:#c8c8d8;line-height:1.8;padding:8px 16px;background:#24243a;border-radius:8px;white-space:pre-wrap}"
-        ".tips{margin-top:18px;font-size:13px;color:#6868a0;text-align:center}"
+        ".guess{font-size:14px;color:#8B7BA6;text-align:center;margin-bottom:4px}"
+        ".sep{border-top:1px solid #EFE6F7;margin:16px 0}"
+        ".clues{font-size:15px;color:#4A3B63;line-height:1.8;padding:10px 16px;background:#F7F3FB;border-radius:12px;white-space:pre-wrap;box-shadow:0 2px 8px rgba(120,80,160,.08)}"
+        ".tips{margin-top:16px;font-size:13px;color:#8B7BA6;text-align:center}"
     )
     body = (
-        '<div class="header"><h2>Maidle 猜歌</h2>'
-        f'<div class="guess">{_html.escape(header)}: ID.{guess_id}</div></div>'
+        '<div class="panel">'
+        '<div class="p-title">Maidle 猜歌</div>'
+        f'<div class="guess">{_html.escape(header)}: ID.{guess_id}</div>'
         '<div class="sep"></div>'
         f'<div class="clues">{_html.escape(clues)}</div>'
         '<div class="tips">继续: /mai maidle guess &lt;ID&gt;  |  放弃: /mai maidle answer</div>'
-        '<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>'
+        '<div class="p-footer">'
+        '<span class="footer-source">MaiBot</span><span class="footer-mai"></span></div>'
+        "</div>"
     )
-    return await renderer.render(doc(style, body), width=480, height=400)
+    return await renderer.render(doc(panel_style(style), body), width=480, height=420)
 
 
 async def render_maidle_answer(
@@ -46,19 +48,18 @@ async def render_maidle_answer(
         else ""
     )
     style = (
-        ".header{text-align:center;margin-bottom:22px}"
-        ".header h2{font-size:20px;color:#e8e8f0;letter-spacing:2px}"
-        ".body2{display:flex;gap:24px;align-items:flex-start}"
-        ".cover{flex-shrink:0;width:160px;height:160px;border-radius:10px;overflow:hidden;border:2px solid #444460;box-shadow:0 2px 10px rgba(0,0,0,.3)}"
+        ".body2{display:flex;gap:22px;align-items:flex-start;margin-top:16px}"
+        ".cover{flex-shrink:0;width:150px;height:150px;border-radius:14px;overflow:hidden;border:2px solid #EFE6F7;box-shadow:0 4px 14px rgba(120,80,160,.16)}"
         ".cover img{width:100%;height:100%;object-fit:cover;display:block}"
         ".info{flex:1;display:flex;flex-direction:column;gap:8px;padding-top:4px;min-width:0}"
-        ".info .song{font-size:20px;color:#e4e4f0;font-weight:600;letter-spacing:1px;overflow-wrap:break-word}"
-        ".info .artist{font-size:15px;color:#a0a0c0}"
-        ".info .sid{font-size:13px;color:#6868a0}"
-        ".footer{margin-top:22px;text-align:center;font-size:13px;color:#6868a0}"
+        ".info .song{font-size:20px;color:#4A3B63;font-weight:800;letter-spacing:1px;overflow-wrap:break-word}"
+        ".info .artist{font-size:15px;color:#6B5D8A}"
+        ".info .sid{font-size:13px;color:#8B7BA6}"
+        ".footer{margin-top:18px;text-align:center;font-size:13px;color:#8B7BA6}"
     )
     body = (
-        '<div class="header"><h2>Maidle 答案</h2></div>'
+        '<div class="panel">'
+        '<div class="p-title">Maidle 答案</div>'
         '<div class="body2">'
         f"{cover_html}"
         '<div class="info">'
@@ -67,12 +68,14 @@ async def render_maidle_answer(
         f'<div class="sid">ID: {_html.escape(sid)}</div>'
         "</div></div>"
         '<div class="footer">使用 /mai maidle 开始新游戏</div>'
-        '<div style="text-align:right;margin-top:16px;font-size:12px;color:#585878">MaiBot</div>'
+        '<div class="p-footer">'
+        '<span class="footer-source">MaiBot</span><span class="footer-mai"></span></div>'
+        "</div>"
     )
     return await renderer.render(
-        doc(style, body),
+        doc(panel_style(style), body),
         width=560,
-        height=350,
+        height=360,
         wait_images=bool(cover_data_url),
         strict_images=True,
     )

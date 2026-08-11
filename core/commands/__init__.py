@@ -2,12 +2,14 @@
 
 from .base import SharedHelpersMixin
 from .basic import BasicCommandsMixin
+from .lxns import LxnsCommandsMixin
 from .maidle import MaidleCommandsMixin
 from .score import ScoreCommandsMixin
 
 __all__ = [
     "SharedHelpersMixin",
     "BasicCommandsMixin",
+    "LxnsCommandsMixin",
     "MaidleCommandsMixin",
     "ScoreCommandsMixin",
 ]

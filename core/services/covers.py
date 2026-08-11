@@ -48,7 +48,10 @@ def sniff_mime(data: bytes) -> Optional[str]:
 
 
 def _df_cover_url(song_id: str) -> str:
-    sid = int(song_id)
+    try:
+        sid = int(song_id)
+    except (TypeError, ValueError):
+        sid = 0
     if 10001 <= sid <= 11000:
         padded = str(sid - 10000).zfill(5)
     else:
@@ -122,8 +125,12 @@ class CoverService:
 
         result: Optional[tuple[bytes, str]] = None
         if self._lxns_enabled and self._lxns:
+            try:
+                sid_int = int(song_id)
+            except (TypeError, ValueError):
+                sid_int = 0
             lxns_url = LxnsApiClient.get_cover_url(
-                self._lxns.asset_url, int(song_id)
+                self._lxns.asset_url, sid_int
             )
             result = await self._download_validated(lxns_url)
 

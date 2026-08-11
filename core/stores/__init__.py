@@ -2,5 +2,6 @@
 
 from .aliases import AliasStore
 from .bindings import BindingStore
+from .lxns_bindings import LxnsBindingStore
 
-__all__ = ["AliasStore", "BindingStore"]
+__all__ = ["AliasStore", "BindingStore", "LxnsBindingStore"]

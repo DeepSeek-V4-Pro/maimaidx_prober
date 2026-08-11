@@ -3,6 +3,7 @@
 
 import hashlib
 import html as _html
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 
@@ -26,6 +27,20 @@ def get_user_id(kwargs: dict) -> str:
 def stable_user_uid(user_id: str) -> int:
     digest = hashlib.sha256(user_id.encode("utf-8")).digest()
     return int.from_bytes(digest[:8], "big")
+
+
+def fmt_utc(ts: Any) -> str:
+    """UTC ISO 时间转北京时间展示；空值返回空串。"""
+
+    if not ts:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        return dt.astimezone(timezone(timedelta(hours=8))).strftime(
+            "%Y-%m-%d %H:%M"
+        )
+    except (TypeError, ValueError):
+        return str(ts)
 
 
 def is_error(resp: Any) -> bool:
