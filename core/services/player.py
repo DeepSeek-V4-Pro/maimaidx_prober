@@ -1106,6 +1106,11 @@ class PlayerQueryService:
             )
         resp = await self._lxns.get_player_by_qq(qq, dev_auth)
         if is_error(resp):
+            if resp.get("_status") == 404:
+                return False, {}, (
+                    f"QQ {qq} 未绑定落雪玩家（或对方在落雪未公开绑定），"
+                    "请确认 QQ 号后重试"
+                )
             return False, {}, error_msg(resp)
         data = resp.get("data") or {}
         return True, {

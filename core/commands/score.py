@@ -21,7 +21,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_b50",
         description="查询舞萌 DX Best 50 成绩，生成图片",
-        pattern=r"^/mai b50(\s+(?P<target>.+))?$",
+        pattern=r"^/mai b50(\s+(?P<target>.+))?\s*$",
     )
     async def handle_b50(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -77,7 +77,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_bind",
         description="绑定水鱼查分器的成绩导入Token",
-        pattern=r"^/mai bind\s+(?P<token>\S+)$",
+        pattern=r"^/mai bind\s+(?P<token>\S+)\s*$",
     )
     async def handle_bind(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -130,7 +130,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_unbind",
         description="解除水鱼查分器账号绑定",
-        pattern=r"^/mai unbind$",
+        pattern=r"^/mai unbind\s*$",
     )
     async def handle_unbind(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -145,7 +145,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_my",
         description="查看个人成绩摘要",
-        pattern=r"^/mai my(\s+(?P<source>--\w+))?$",
+        pattern=r"^/mai my(\s+(?P<source>--\w+))?\s*$",
     )
     async def handle_my(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -186,7 +186,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_plate",
         description="按版本查询水鱼成绩（需配置水鱼 Developer-Token）",
-        pattern=r"^/mai plate\s+(?P<versions>.+)$",
+        pattern=r"^/mai plate\s+(?P<versions>.+)\s*$",
     )
     async def handle_plate(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,

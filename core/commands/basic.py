@@ -35,7 +35,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_help",
         description="显示 MaiMai DX 查分器命令总览",
-        pattern=r"^/mai help$",
+        pattern=r"^/mai help\s*$",
     )
     async def handle_help(self, stream_id: str = "", **kwargs: Any) -> tuple:
         await self._track_user(stream_id, self._get_user_id(kwargs))
@@ -51,7 +51,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_pick",
         description="随机选择 — 帮你在 2~4 个选项中做决定",
-        pattern=r"^/mai (pick|choose|选|选择)\s+(?P<options>.+)$",
+        pattern=r"^/mai (pick|choose|选|选择)\s+(?P<options>.+)\s*$",
     )
     async def handle_pick(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -96,7 +96,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_song",
         description="搜索舞萌 DX 曲目",
-        pattern=r"^/mai song\s+(?P<keyword>.+)$",
+        pattern=r"^/mai song\s+(?P<keyword>.+)\s*$",
     )
     async def handle_song(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -218,7 +218,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_charts",
         description="查看全谱面难度分布统计",
-        pattern=r"^/mai charts$",
+        pattern=r"^/mai charts\s*$",
     )
     async def handle_charts(self, stream_id: str = "", **kwargs: Any) -> tuple:
         await self._track_user(stream_id, self._get_user_id(kwargs))
@@ -246,7 +246,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_hot",
         description="查看水鱼热门歌曲 TOP N",
-        pattern=r"^/mai hot(\s+(?P<limit>\d+))?$",
+        pattern=r"^/mai hot(\s+(?P<limit>\d+))?\s*$",
     )
     async def handle_hot(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -277,7 +277,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_ranking",
         description="查看水鱼 DX Rating 排行榜 TOP N",
-        pattern=r"^/mai ranking(\s+(?P<limit>\d+))?$",
+        pattern=r"^/mai ranking(\s+(?P<limit>\d+))?\s*$",
     )
     async def handle_ranking(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -308,7 +308,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_status",
         description="查看 diving-fish 和 lxns 服务器状态",
-        pattern=r"^/mai status$",
+        pattern=r"^/mai status\s*$",
     )
     async def handle_status(self, stream_id: str = "", **kwargs: Any) -> tuple:
         await self._track_user(stream_id, self._get_user_id(kwargs))
@@ -340,7 +340,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_today",
         description="今日运势 — 查看今日宜忌与推荐歌曲",
-        pattern=r"^/mai today$",
+        pattern=r"^/mai today\s*$",
     )
     async def handle_today(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -423,7 +423,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_alias_add",
         description="为歌曲添加别称",
-        pattern=r"^/mai alias add\s+(?P<song_id>\S+)\s+(?P<alias>.+)$",
+        pattern=r"^/mai alias add\s+(?P<song_id>\S+)\s+(?P<alias>.+)\s*$",
     )
     async def handle_alias_add(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -479,7 +479,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_alias_del",
         description="删除歌曲别称",
-        pattern=r"^/mai alias del\s+(?P<song_id>\S+)\s+(?P<alias>.+)$",
+        pattern=r"^/mai alias del\s+(?P<song_id>\S+)\s+(?P<alias>.+)\s*$",
     )
     async def handle_alias_del(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -506,7 +506,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_alias_list",
         description="查看歌曲所有别称",
-        pattern=r"^/mai alias list\s+(?P<song_id>\S+)$",
+        pattern=r"^/mai alias list\s+(?P<song_id>\S+)\s*$",
     )
     async def handle_alias_list(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -551,7 +551,7 @@ class BasicCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_alias_import",
         description="从 lxns 导入社区别名到本地",
-        pattern=r"^/mai alias import$",
+        pattern=r"^/mai alias import\s*$",
     )
     async def handle_alias_import(
         self, stream_id: str = "", **kwargs: Any,

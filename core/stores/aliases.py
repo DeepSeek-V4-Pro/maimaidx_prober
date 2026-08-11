@@ -75,33 +75,34 @@ class AliasStore(JsonStore):
     async def import_from_lxns(
         self, fetch_page,
     ) -> tuple[int, int]:
+        """导入落雪公开社区别名（GET /maimai/alias/list）。
+
+        真实返回结构：``{"aliases": [{"song_id": 8, "aliases": ["真爱歌", ...]}]}``，
+        单次请求返回全量（无分页字段）。
+        """
+
         imported = 0
         skipped = 0
-        page = 1
-        max_pages = 100  # 防呆：服务端异常时避免无限翻页
+        resp = await fetch_page(1)
+        if not isinstance(resp, dict) or resp.get("_error"):
+            return imported, skipped
+        aliases = resp.get("aliases", [])
+        if not isinstance(aliases, list) or not aliases:
+            return imported, skipped
+
         pending: list[tuple[str, str]] = []
-        while page <= max_pages:
-            resp = await fetch_page(page)
-            if not isinstance(resp, dict) or resp.get("_error"):
-                break
-            aliases = resp.get("aliases", [])
-            if not isinstance(aliases, list) or not aliases:
-                break
-            for entry in aliases:
-                if not isinstance(entry, dict):
-                    continue
-                if not entry.get("approved", False):
-                    continue
-                alias_text = entry.get("alias", "")
-                song = entry.get("song", {})
-                song_id = str(song.get("id", "") if isinstance(song, dict) else "")
-                if not alias_text or not song_id:
-                    continue
-                pending.append((alias_text.strip(), song_id))
-            page += 1
-            page_count = resp.get("page_count", 0)
-            if page > page_count:
-                break
+        for entry in aliases:
+            if not isinstance(entry, dict):
+                continue
+            song_id = str(entry.get("song_id", "") or "")
+            alias_list = entry.get("aliases")
+            if not song_id or not isinstance(alias_list, list):
+                continue
+            for alias_text in alias_list:
+                text = str(alias_text or "").strip()
+                if text:
+                    pending.append((text, song_id))
+
         async with self._lock:
             for alias_text, song_id in pending:
                 key = alias_text.lower()

@@ -17,7 +17,7 @@ class MaidleCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_maidle_start",
         description="开始 Maidle 猜歌游戏",
-        pattern=r"^/mai maidle$",
+        pattern=r"^/mai maidle\s*$",
     )
     async def handle_maidle_start(
         self, stream_id: str = "", **kwargs: Any,
@@ -68,7 +68,7 @@ class MaidleCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_maidle_guess",
         description="Maidle 猜歌 — 提交猜测",
-        pattern=r"^/mai maidle guess\s+(?P<guess>.+)$",
+        pattern=r"^/mai maidle guess\s+(?P<guess>.+)\s*$",
     )
     async def handle_maidle_guess(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -129,7 +129,7 @@ class MaidleCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_maidle_help",
         description="Maidle 猜歌游戏说明",
-        pattern=r"^/mai maidle help$",
+        pattern=r"^/mai maidle help\s*$",
     )
     async def handle_maidle_help(self, stream_id: str = "", **kwargs: Any) -> tuple:
         await self._track_user(stream_id, self._get_user_id(kwargs))
@@ -143,7 +143,7 @@ class MaidleCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_maidle_answer",
         description="Maidle 猜歌 — 查看答案",
-        pattern=r"^/mai maidle answer$",
+        pattern=r"^/mai maidle answer\s*$",
     )
     async def handle_maidle_answer(
         self, stream_id: str = "", **kwargs: Any,

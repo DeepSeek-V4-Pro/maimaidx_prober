@@ -42,7 +42,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_bind",
         description="绑定落雪账号（OAuth 授权）",
-        pattern=r"^/mai lxns bind$",
+        pattern=r"^/mai lxns bind\s*$",
     )
     async def handle_lxns_bind(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -65,7 +65,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_bind_token",
         description="绑定落雪账号（个人 API 密钥）",
-        pattern=r"^/mai lxns bind token\s+(?P<token>\S+)$",
+        pattern=r"^/mai lxns bind token\s+(?P<token>\S+)\s*$",
     )
     async def handle_lxns_bind_token(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -95,7 +95,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_bind_code",
         description="用授权码完成落雪 OAuth 绑定",
-        pattern=r"^/mai lxns bind code\s+(?P<code>\S+)(\s+(?P<state>\S+))?$",
+        pattern=r"^/mai lxns bind code\s+(?P<code>\S+)(\s+(?P<state>\S+))?\s*$",
     )
     async def handle_lxns_bind_code(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -122,7 +122,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_unbind",
         description="解除落雪账号绑定",
-        pattern=r"^/mai lxns unbind$",
+        pattern=r"^/mai lxns unbind\s*$",
     )
     async def handle_lxns_unbind(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -137,7 +137,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_status",
         description="查看落雪绑定状态",
-        pattern=r"^/mai lxns status$",
+        pattern=r"^/mai lxns status\s*$",
     )
     async def handle_lxns_status(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -161,7 +161,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_player",
         description="查看落雪玩家资料卡",
-        pattern=r"^/mai lxns player(\s+(?P<target>\S+))?$",
+        pattern=r"^/mai lxns player(\s+(?P<target>\S+))?\s*$",
     )
     async def handle_lxns_player(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -203,7 +203,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_ap50",
         description="查询落雪 All Perfect 50（好友码，开发者模式）",
-        pattern=r"^/mai lxns ap50\s+(?P<target>\d+)$",
+        pattern=r"^/mai lxns ap50\s+(?P<target>\d+)\s*$",
     )
     async def handle_lxns_ap50(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -241,7 +241,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_heatmap",
         description="查看落雪成绩上传热力图",
-        pattern=r"^/mai lxns heatmap$",
+        pattern=r"^/mai lxns heatmap\s*$",
     )
     async def handle_lxns_heatmap(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -267,7 +267,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_trend",
         description="查看落雪 DX Rating 趋势",
-        pattern=r"^/mai lxns trend(\s+(?P<version>\d+))?$",
+        pattern=r"^/mai lxns trend(\s+(?P<version>\d+))?\s*$",
     )
     async def handle_lxns_trend(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -301,7 +301,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_history",
         description="查看单曲游玩历史（落雪）",
-        pattern=r"^/mai lxns history\s+(?P<keyword>.+)$",
+        pattern=r"^/mai lxns history\s+(?P<keyword>.+)\s*$",
     )
     async def handle_lxns_history(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -333,7 +333,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_rank",
         description="查看单曲分数排行（落雪）",
-        pattern=r"^/mai lxns rank\s+(?P<keyword>.+)$",
+        pattern=r"^/mai lxns rank\s+(?P<keyword>.+)\s*$",
     )
     async def handle_lxns_rank(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -365,7 +365,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_year",
         description="查看年度回顾（落雪）",
-        pattern=r"^/mai lxns year(\s+(?P<year>\d{4}))?$",
+        pattern=r"^/mai lxns year(\s+(?P<year>\d{4}))?\s*$",
     )
     async def handle_lxns_year(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -401,7 +401,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_collections",
         description="查看落雪收藏品（称号/头像等）",
-        pattern=r"^/mai lxns collections$",
+        pattern=r"^/mai lxns collections\s*$",
     )
     async def handle_lxns_collections(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -463,7 +463,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_upload",
         description="把水鱼成绩同步上传到落雪账号",
-        pattern=r"^/mai lxns upload$",
+        pattern=r"^/mai lxns upload\s*$",
     )
     async def handle_lxns_upload(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -494,7 +494,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_df_upload",
         description="把落雪成绩同步上传到水鱼（反向同步，只升不降）",
-        pattern=r"^/mai df upload$",
+        pattern=r"^/mai df upload\s*$",
     )
     async def handle_df_upload(self, stream_id: str = "", **kwargs: Any) -> tuple:
         user_id = self._get_user_id(kwargs)
@@ -527,7 +527,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_best",
         description="查看单曲所有谱面最佳成绩（落雪）",
-        pattern=r"^/mai lxns best(?:\s+(?P<fc>\d{12,}))?\s+(?P<keyword>.+)$",
+        pattern=r"^/mai lxns best(?:\s+(?P<fc>\d{12,}))?\s+(?P<keyword>.+)\s*$",
     )
     async def handle_lxns_best(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -563,7 +563,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_qq",
         description="按 QQ 号查询落雪玩家资料（开发者模式）",
-        pattern=r"^/mai lxns qq\s+(?P<qq>\d+)$",
+        pattern=r"^/mai lxns qq\s+(?P<qq>\d+)\s*$",
     )
     async def handle_lxns_qq(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -622,7 +622,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_comment_list",
         description="查看曲目评论（落雪）",
-        pattern=r"^/mai lxns comment list\s+(?P<keyword>.+)$",
+        pattern=r"^/mai lxns comment list\s+(?P<keyword>.+)\s*$",
     )
     async def handle_lxns_comment_list(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -667,7 +667,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_comment_post",
         description="发表曲目评论（落雪）",
-        pattern=r"^/mai lxns comment\s+(?P<keyword>.+?)\s+(?P<content>.+)$",
+        pattern=r"^/mai lxns comment\s+(?P<keyword>.+?)\s+(?P<content>.+)\s*$",
     )
     async def handle_lxns_comment_post(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,
@@ -704,7 +704,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
     @Command(
         "mai_lxns_comment_like",
         description="点赞曲目评论（落雪）",
-        pattern=r"^/mai lxns comment like\s+(?P<cid>\d+)$",
+        pattern=r"^/mai lxns comment like\s+(?P<cid>\d+)\s*$",
     )
     async def handle_lxns_comment_like(
         self, stream_id: str = "", matched_groups: dict = None, **kwargs: Any,

@@ -133,12 +133,13 @@ class LxnsApiClient:
     @staticmethod
     def get_cover_url(asset_url: str, song_id: int) -> str:
         resource_id = song_id % 10000
-        return f"{asset_url.rstrip('/')}/maimai/jacket/{resource_id}.png"
+        # !webp 为 CDN 变换后缀，可绕过 WAF 挑战页并返回真实图片
+        return f"{asset_url.rstrip('/')}/maimai/jacket/{resource_id}.png!webp"
 
     @staticmethod
     def get_icon_url(asset_url: str, icon_id: int) -> str:
         """玩家头像静态图 URL（GET /maimai/icon/{icon_id}.png 实测可用）。"""
-        return f"{asset_url.rstrip('/')}/maimai/icon/{int(icon_id)}.png"
+        return f"{asset_url.rstrip('/')}/maimai/icon/{int(icon_id)}.png!webp"
 
     @staticmethod
     def get_collection_url(asset_url: str, collection_type: str, collection_id: int) -> str:
@@ -146,7 +147,7 @@ class LxnsApiClient:
 
         return (
             f"{asset_url.rstrip('/')}/maimai/{collection_type}/"
-            f"{int(collection_id)}.png"
+            f"{int(collection_id)}.png!webp"
         )
 
     @property
