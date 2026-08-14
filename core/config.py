@@ -11,7 +11,7 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_icon__ = "package"
     __ui_order__ = 0
     enabled: bool = Field(default=True, description="是否启用插件")
-    config_version: str = Field(default="3.0.0", description="配置版本")
+    config_version: str = Field(default="3.1.0", description="配置版本")
     auto_install_deps: bool = Field(
         default=False,
         description="依赖缺失时自动执行 pip 安装（默认关闭，建议手动执行 install_deps.py）",

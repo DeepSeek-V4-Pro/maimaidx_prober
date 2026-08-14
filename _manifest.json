@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "name": "MaiMai DX 双源查分器",
   "description": "舞萌 DX 双源查分插件：diving-fish（水鱼）查分 + lxns（落雪）账号接入（OAuth/个人密钥/开发者密钥），支持 B50、个人成绩、热力图、趋势、历史、排行、年度回顾、收藏品、成绩同步上传、猜歌与运势",
   "author": {

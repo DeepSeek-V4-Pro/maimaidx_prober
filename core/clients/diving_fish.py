@@ -7,6 +7,37 @@ from typing import Any
 import aiohttp
 
 
+# 水鱼 /query/plate 的 version 参数必须使用完整版本名称（如 "maimai PLUS"），
+# 单字代号（真/超/檄/...）是给用户看的简称，服务端按 music.version 精确匹配，
+# 传简称会匹配不到任何记录。这里统一做 简称 → 完整名称 映射。
+_VERSION_FULL_NAMES: dict[str, str] = {
+    "真": "maimai PLUS",
+    "超": "maimai GreeN",
+    "檄": "maimai GreeN PLUS",
+    "橙": "maimai ORANGE",
+    "暁": "maimai ORANGE PLUS",
+    "桃": "maimai PiNK",
+    "櫻": "maimai PiNK PLUS",
+    "紫": "maimai MURASAKi",
+    "菫": "maimai MURASAKi PLUS",
+    "白": "maimai MiLK",
+    "雪": "MiLK PLUS",
+    "輝": "maimai FiNALE",
+    "舞": "ALL FiNALE",
+    "熊": "maimai でらっくす",
+    "華": "maimai でらっくす PLUS",
+    "爽": "maimai でらっくす Splash",
+    "煌": "maimai でらっくす Splash PLUS",
+    "宙": "maimai でらっくす UNiVERSE",
+    "星": "maimai でらっくす UNiVERSE PLUS",
+    "祭": "maimai でらっくす FESTiVAL",
+    "祝": "maimai でらっくす FESTiVAL PLUS",
+    "双": "maimai でらっくす BUDDiES",
+    "宴": "maimai でらっくす BUDDiES PLUS",
+    "鏡": "maimai でらっくす PRiSM",
+}
+
+
 class DivingFishApiClient:
 
     def __init__(
@@ -118,14 +149,19 @@ class DivingFishApiClient:
     ) -> dict:
         """按版本查询成绩（/query/plate，实际需要 Developer-Token）。
 
-        target 为用户名或 QQ 号；versions 使用水鱼版本中文单字代号
-        （真/超/檄/橙/暁/桃/櫻/紫/菫/白/雪/輝/舞/熊/華/爽/煌/宙/星/祭/祝/双/宴/鏡）。
+        target 为用户名或 QQ 号；versions 接受中文单字代号
+        （真/超/檄/橙/暁/桃/櫻/紫/菫/白/雪/輝/舞/熊/華/爽/煌/宙/星/祭/祝/双/宴/鏡）
+        或完整版本名称（maimai PLUS / maimai でらっくす PRiSM 等），
+        发送前统一转换为服务端要求的完整版本名称。
         """
 
         token = developer_token or self._developer_token
         if not token:
             return self._error("未配置水鱼 Developer-Token（config.toml [server].developer_token）")
-        body: dict[str, Any] = {"version": list(versions)}
+        full_versions = [
+            _VERSION_FULL_NAMES.get(v, v) for v in versions
+        ]
+        body: dict[str, Any] = {"version": full_versions}
         if target.isdigit():
             body["qq"] = target
         else:

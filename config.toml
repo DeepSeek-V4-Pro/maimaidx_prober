@@ -1,6 +1,6 @@
 [plugin]
 enabled = true
-config_version = "3.0.0"
+config_version = "3.1.0"
 auto_install_deps = false
 game_version = 25500
 developer_qq = []

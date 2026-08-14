@@ -1,4 +1,4 @@
-# MaiMai DX 查分器插件（v3.0.0）· 用户文档
+# MaiMai DX 查分器插件（v3.1.0）· 用户文档
 
 > 面向**插件使用者**（MaiBot 服主 / 群友）的安装、配置与命令说明。
 > 开发者请阅读 [DEVELOPMENT.md](DEVELOPMENT.md)。
@@ -8,7 +8,7 @@
 B50 成绩图、个人成绩、曲目搜索、猜歌、谱面统计、今日运势、热门/排行，以及落雪独有
 的热力图、趋势、历史、排行、年度回顾、收藏品、双向成绩同步等能力。
 
-> **插件版本**: 3.0.0 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
+> **插件版本**: 3.1.0 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
 > **水鱼 API**: <https://www.diving-fish.com/api/maimaidxprober>
 > **lxns API**: <https://maimai.lxns.net/api/v0>
 
@@ -97,7 +97,7 @@ python install_deps.py
 ```toml
 [plugin]
 enabled = true               # 是否启用插件
-config_version = "3.0.0"     # 配置版本（请勿手动修改）
+config_version = "3.1.0"     # 配置版本（请勿手动修改）
 auto_install_deps = false    # 依赖缺失时自动安装
 game_version = 25500         # B50 头部版本图标（25500=舞萌DX 2026）
 developer_qq = []            # 允许使用开发者凭证的 QQ 号列表；为空则关闭全部开发者功能
@@ -353,7 +353,7 @@ no_sandbox = true
 
 ---
 
-**插件版本**: 3.0.0  
+**插件版本**: 3.1.0  
 **插件 ID**: `deepseek-v4-pro.maimaidx-prober`  
 **更新日志**: [CHANGELOG.md](CHANGELOG.md)  
 **开发者文档**: [DEVELOPMENT.md](DEVELOPMENT.md)

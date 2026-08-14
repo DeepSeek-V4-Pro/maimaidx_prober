@@ -2,7 +2,7 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## 当前状态（2026-08-11）
+## 当前状态（2026-08-14）
 
 > 项目处于**开发中的半成品**状态：功能链路可用，但打磨程度不均衡。
 
@@ -12,6 +12,19 @@
   history / rank / year / collections / pick / status / charts / alias /
   lxns status / player / plate）已统一为 B50 同风格浅色面板；
 - 使用文档见 [README.md](README.md)，开发文档见 [DEVELOPMENT.md](DEVELOPMENT.md)。
+
+## [3.1.0] - 2026-08-14
+
+> v3.1 修复水鱼按版本查询（`/mai plate`）并完成开发者密钥实测。
+
+### 修复
+
+- `/mai plate` 之前始终返回空结果：水鱼 `/query/plate` 的 `version` 必须传完整
+  版本名称（`maimai PLUS` / `maimai でらっくす PRiSM` 等），服务端按
+  `music.version` 精确匹配，单字代号匹配不到任何记录；现已支持用户直接使用
+  中文单字代号（真/超/檄/.../鏡），发送前自动映射为完整版本名称；
+- 实测水鱼 Developer-Token：密钥校验、按 QQ/用户名查询均正常
+  （绑定账号查询 真+超+鏡 返回 219 条成绩）。
 
 ## [3.0.0] - 2026-08-11
 
@@ -185,6 +198,8 @@
 
 - 首个正式版本：连接 diving-fish 查分器，提供曲目搜索、B50、个人成绩查询。
 
+[3.1.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.1.0
+[3.0.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.0.0
 [2.0.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v2.0.0
 [1.1.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v1.0.0

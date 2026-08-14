@@ -1,4 +1,4 @@
-# MaiMai DX 查分器 v2.0 依赖
+# MaiMai DX 查分器 v3.1 依赖
 # 安装: pip install -r requirements.txt
 aiohttp>=3.8
 playwright>=1.40
