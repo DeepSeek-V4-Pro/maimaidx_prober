@@ -1,0 +1,39 @@
+本目录随插件分发的素材来源与许可汇总（2026-09-02 修订）。
+
+一、maimai 官方 UI 图标（assets/maimai/class_rank、course_rank）
+  来源：maimai-prober-frontend（public/assets/maimai/）
+        https://github.com/Lxns-Network/maimai-prober-frontend
+  许可：MIT License，Copyright (c) 2026 Lxns-Network。
+  底层游戏美术版权归 SEGA 及其相关方所有，仅用于非商业的玩家成绩展示。
+
+二、页面背景（assets/logo_background.webp）
+  来源：maimai-prober-frontend（public/logo_background.webp）
+        https://github.com/Lxns-Network/maimai-prober-frontend
+  许可：MIT License，Copyright (c) 2026 Lxns-Network。
+
+三、B50 素材包（assets/awmc_core/）
+  来源：Yuri-YuzuChaN/maimaiDX（Resource CN1.55 static 包）
+        https://github.com/Yuri-YuzuChaN/maimaiDX
+  素材目录结构与字型约定另参考：
+        https://github.com/AWMC-TEAM/maimaiDX-QueryBot（MIT）
+        https://github.com/frostfallx/astrbot_plugin_maimaib50（AGPL-3.0-only；
+        其 NOTICE 另列出 HanYaaaaaaa/analyze-b50、HanYaaaaaaa/nonebot-plugin-b50-analysis、
+        Zeraora-807/astrbot_plugin_b50_analysis、ZhiheZier/astrbot_plugin_maimaidx）
+  版式设计署名（成品图中保留）：Designed by Yuri-YuzuChaN & BlueDeer233
+  详细许可见 assets/awmc_core/NOTICE。
+
+四、字体
+  - assets/fonts/VarelaRound-Regular.ttf：
+    SIL Open Font License 1.1（见 assets/fonts/OFL.txt），
+    Copyright 2023 The Varela Round Project Authors，
+    Reserved Font Names 'Varela'、'Varela Round'。
+  - assets/awmc_core/font/ResourceHanRoundedCN-Bold.ttf：
+    SIL Open Font License 1.1（见 assets/awmc_core/NOTICE）。
+  - assets/awmc_core/font/Torus SemiBold.otf：
+    商业字体，详见 assets/awmc_core/NOTICE。
+
+五、游戏商标与美术
+  maimai DX 及其图标、徽章、曲绘、称号、等级素材等版权归 SEGA 及其相关方所有，
+  本插件仅用于非商业的玩家成绩展示，不主张对任何游戏素材的所有权。
+
+完整第三方许可与参考项目清单见仓库根目录 THIRD_PARTY_NOTICES.md。

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 本地开发/演示文件（不进入仓库）
+_v2_today.png
+_v2_song_final.png
+_maidle_test.png
+审查报告.txt
+quick_command_summary.json
+
+# 本地归档（未纳入插件的旧版/无用文件，不上传）
+_archive/
+
+# 运行时数据（用户绑定/别称，不入库）
+bindings.json
+aliases.json
+lxns_bindings.json
+df_oauth_bindings.json
+config_back/
+
+# AWMC 完整资源包（体积较大，本地保留；提交仓库时忽略）
+assets/awmc/

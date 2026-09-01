@@ -1,0 +1,40 @@
+AWMC / Yuzu B50 素材包（核心渲染文件）
+
+素材来源：
+  https://github.com/Yuri-YuzuChaN/maimaiDX
+  Resource CN1.55 static 包（Yuri-YuzuChaN 官方发布）
+  素材目录结构 / 字型约定另参考：
+    https://github.com/AWMC-TEAM/maimaiDX-QueryBot（MIT）
+    https://github.com/frostfallx/astrbot_plugin_maimaib50（AGPL-3.0-only）
+
+代码与设计：
+  Copyright (c) 2021 Yuri-YuzuChaN
+  Copyright (c) Yuri-YuzuChaN, BlueDeer233 and contributors
+  上游项目仓库 LICENSE 为 MIT License。
+  版式设计署名（成品图中保留）：
+    Designed by Yuri-YuzuChaN & BlueDeer233
+  frostfallx/astrbot_plugin_maimaib50 为 AGPL-3.0-only 的组合作品，
+  其 NOTICE 所列合并来源：
+    HanYaaaaaaa/analyze-b50（MIT）
+    HanYaaaaaaa/nonebot-plugin-b50-analysis（MIT）
+    Zeraora-807/astrbot_plugin_b50_analysis（MIT）
+    AWMC-TEAM/maimaiDX-QueryBot（MIT）
+    Yuri-YuzuChaN/maimaiDX（MIT）
+    ZhiheZier/astrbot_plugin_maimaidx（AGPL-3.0）
+
+游戏图标 / UI 素材：
+  版权归 SEGA 及其相关运营方所有，仅用于非商业的玩家成绩展示。
+
+字体：
+  ResourceHanRoundedCN-Bold.ttf
+    Copyright (c) 2018-2022 Cyano Hao,
+    Portions Copyright (c) 2014-2021 Adobe.
+    Licensed under SIL Open Font License 1.1.
+    来源：https://github.com/CyanoHao/Resource-Han-Rounded
+
+  Torus SemiBold.otf
+    Copyright (c) 2017 Paulo Goode. All rights reserved.
+    商业字体；本项目为非商业用途，使用前请确认已取得相应授权。
+
+完整曲绘目录 assets/awmc/mai/cover/ 为本地运行时素材，未进入 Git。
+缺失曲绘会自动回退到落雪资源 CDN。
