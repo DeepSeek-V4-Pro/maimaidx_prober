@@ -35,7 +35,7 @@ robocopy <src> <dst> /E /XD __pycache__ /XF config.toml
 ### 分层
 
 ```
-命令层 core/commands/     @Command 装饰器 + mixin（basic / score / lxns / maidle）
+命令层 core/commands/     @Command 装饰器 + mixin（basic / score / diving_fish / lxns / maidle）
    │
 服务层 core/services/     PlayerQueryService（统一选源）→ 其余业务服务
    │
@@ -75,7 +75,7 @@ config.toml                  # 配置模板（部署时保留线上密钥）
 install_deps.py              # 依赖自检安装（aiohttp + playwright + Pillow）
 Dockerfile.example           # 容器构建示例
 THIRD_PARTY_NOTICES.md       # 第三方组件与素材许可汇总
-assets/                      # 官方素材（maimai）+ Varela Round 字体 + AWMC/Yuzu B50 素材（awmc_core；完整曲绘缓存 awmc/ 不入库）
+assets/                      # 官方素材（maimai）+ Varela Round 字体 + AWMC/Yuzu 信息卡素材（awmc_core；完整曲绘缓存 awmc/ 不入库）
 core/
 ├── plugin.py                # MaiMaiDXPlugin：生命周期 + 组装（mixin 挂载）
 ├── config.py                # pydantic 配置模型（plugin/server/lxns/render）
@@ -104,15 +104,17 @@ core/
 ├── renderers/
 │   ├── theme.py             # 浅色面板/卡片组件（其它信息查询沿用）
 │   ├── b50_awmc_pillow.py   # Best 50（AWMC/Yuzu 原版贴图）
+│   ├── awmc_info_pillow.py  # 单曲详情 / 单曲最佳（AWMC chart_info / play_info）
 │   ├── charts.py aliases.py lxns_status.py player.py plate.py
 │   ├── hot.py ranking.py best.py history.py rank.py trend.py heatmap.py
 │   ├── collections.py year.py my.py song.py today.py pick.py status.py
-│   ├── help.py maidle.py
+│   ├── help.py             # 总览 / df help / lxns help
+│   ├── maidle.py           # Maidle 说明
 │   └── common.py            # doc()/cmd_section()/footer_bar()
 └── commands/
     ├── base.py              # SharedHelpersMixin（渲染发送/绑定/详情文本）
-    ├── basic.py             # help/song/charts/hot/ranking/status/today/alias
-    ├── diving_fish.py       # 水鱼 OAuth 绑定管理（df bind/confirm/unbind/status）
+    ├── basic.py             # 总入口 / song/charts/hot/ranking/status/today/alias
+    ├── diving_fish.py       # 水鱼 OAuth 绑定管理 + df help
     ├── score.py             # b50/my/bind/unbind/plate
     ├── lxns.py              # 绑定管理 + 落雪独有能力 + 双向上传
     └── maidle.py            # 猜歌
@@ -150,6 +152,9 @@ core/
 
 - B50 / AP50 走 `b50_awmc_pillow.py`：Pillow 直接拼 AWMC/Yuzu 固定 1400x1600
   画布（不经过 HTML / 浏览器），曲绘本地缓存优先、远程兜底；
+- 单曲详情 / 单曲最佳走 `awmc_info_pillow.py`：Pillow 直接拼
+  `chart_info.png` / `play_info.png`（不经过 HTML / 浏览器），
+  曲绘本地缓存优先、远程兜底；
 - 其余渲染器输出 HTML，经 `HtmlRenderer.render()`：
   1. 优先宿主 `ctx.render.html2png`（宿主管 Chromium/并发/沙箱）；
   2. 宿主不可用回退插件内置 Playwright（`--no-sandbox`，按配置）；
@@ -202,7 +207,7 @@ async def handle_xxx(self, stream_id: str = "", matched_groups: dict = None, **k
 
 1. `core/config.py` 对应 pydantic 模型加字段（`Field(default=..., description=...)`）；
 2. 同步 `config.toml` 模板与已部署实例的 `config.toml`（**保留线上密钥**）；
-3. 配置结构变化时按约定提升 `config_version`（当前 3.2 内不升大版本）；
+3. 配置结构变化时按约定提升 `config_version`（当前 3.3 内不升大版本）；
 4. `on_config_update` 会自动重建渲染器与客户端，无需额外处理。
 
 ## 6. 数据模型要点
@@ -251,7 +256,7 @@ OAuth 令牌、开发者密钥），开发者改动时必须遵守以下红线�
 | 水鱼 OAuth access+refresh | `data/plugins/<id>/df_oauth_bindings.json` | `DivingFishBindingStore.set_oauth` / `update_tokens` |
 | 落雪个人密钥 / OAuth access+refresh | `data/plugins/<id>/lxns_bindings.json` | `LxnsBindingStore.set_*` |
 | 落雪开发者密钥（全局） | `plugins/maimaidx_prober/config.toml` | 手工配置 |
-| 水鱼 Developer-Token（全局） | `plugins/maimaidx_prober/config.toml` | 手工配置 |
+| 水鱼 Developer-Token（全局） | `plugins/maimaidx_prober/config.toml` | 仅旧版 `/mai plate` 回退；2026-10-01 起停止服务 |
 
 ### 代码红线
 
@@ -288,7 +293,7 @@ OAuth 令牌、开发者密钥），开发者改动时必须遵守以下红线�
   跨包用 `from src`/相对导入；
 - 类型注解：函数参数/返回尽量注解，泛型用 `typing`（`List[int]` 等）；
 - 注释：保留原有注释，复杂逻辑补充注释；不做无边界重构；
-- 依赖：以 `pyproject.toml` 为准并同步 `requirements.txt`；
+- 依赖：以 `requirements.txt` 为准；
 - 修改配置文件只改模板并升版本号，不擅自新增 `ConfigUpgradeHook`；
 - 插件在 `plugins/` 下独立维护，主程序代码改动需先申请许可。
 
@@ -296,6 +301,6 @@ OAuth 令牌、开发者密钥），开发者改动时必须遵守以下红线�
 
 1. 功能完成 + 回归通过后，更新 `CHANGELOG.md`（按「主要功能 / 细节修复」分组）与
    `README.md` / `DEVELOPMENT.md` 命令表；
-2. 版本号与 `_manifest.json` 同步（当前 3.2 内保持 `3.2.0`，不升大版本）；
+2. 版本号与 `_manifest.json` 同步（当前 3.3 内保持 `3.3.0`，不升大版本）；
 3. 提交到仓库（插件仓库独立于 MaiBot 主仓库）；
 4. 插件市场从仓库拉取新版本后，在线上实例热重载验证。

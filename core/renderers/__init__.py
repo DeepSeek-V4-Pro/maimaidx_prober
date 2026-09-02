@@ -1,12 +1,13 @@
 """图片渲染器。"""
 
 from .aliases import render_aliases
+from .awmc_info_pillow import render_play_info, render_song_info
 from .b50_awmc_pillow import render_b50
 from .best import render_best
 from .charts import render_charts
 from .collections import render_collections
 from .heatmap import render_heatmap
-from .help import render_help, render_maidle_help
+from .help import render_df_help, render_help, render_lxns_help, render_maidle_help
 from .history import render_history
 from .hot import render_hot
 from .lxns_status import render_lxns_status
@@ -25,14 +26,17 @@ from .year import render_year
 
 __all__ = [
     "render_aliases",
+    "render_play_info",
     "render_b50",
     "render_best",
     "render_charts",
     "render_collections",
+    "render_df_help",
     "render_help",
     "render_heatmap",
     "render_history",
     "render_hot",
+    "render_lxns_help",
     "render_lxns_status",
     "render_maidle_help",
     "render_maidle_answer",
@@ -44,6 +48,7 @@ __all__ = [
     "render_rank",
     "render_ranking",
     "render_song_detail",
+    "render_song_info",
     "render_status",
     "render_today",
     "render_trend",

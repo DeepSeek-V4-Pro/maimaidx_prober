@@ -5,6 +5,7 @@ from typing import Any
 
 from maibot_sdk import Command
 
+from ..renderers import render_df_help
 from .base import SharedHelpersMixin
 
 
@@ -16,6 +17,22 @@ def _masked_qq(user_id: str) -> str:
 
 
 class DivingFishCommandsMixin(SharedHelpersMixin):
+
+    @Command(
+        "mai_df_help",
+        description="查看水鱼（diving-fish）专属命令帮助",
+        pattern=r"^/mai df help\s*$",
+    )
+    async def handle_df_help(
+        self, stream_id: str = "", **kwargs: Any
+    ) -> tuple:
+        await self._track_user(stream_id, self._get_user_id(kwargs))
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_df_help(self._renderer),
+            "水鱼帮助图片生成失败",
+        )
+        return ok, "显示水鱼帮助", True
 
     @Command(
         "mai_df_bind",

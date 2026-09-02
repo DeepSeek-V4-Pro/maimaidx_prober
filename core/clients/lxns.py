@@ -138,8 +138,15 @@ class LxnsApiClient:
 
     @staticmethod
     def get_icon_url(asset_url: str, icon_id: int) -> str:
-        """玩家头像静态图 URL（GET /maimai/icon/{icon_id}.png 实测可用）。"""
-        return f"{asset_url.rstrip('/')}/maimai/icon/{int(icon_id)}.png!webp"
+        """玩家头像静态图 URL。
+
+        ``assets.lxns.net`` 对服务端 Python 请求会返回 WAF HTML，
+        头像实际走 ``assets2.lxns.net`` 的原始 PNG。
+        """
+        base = asset_url.rstrip("/")
+        if "assets.lxns.net" in base and "assets2.lxns.net" not in base:
+            base = base.replace("assets.lxns.net", "assets2.lxns.net")
+        return f"{base}/maimai/icon/{int(icon_id)}.png"
 
     @staticmethod
     def get_collection_url(asset_url: str, collection_type: str, collection_id: int) -> str:

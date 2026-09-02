@@ -1,4 +1,4 @@
-# MaiMai DX 查分器插件（v3.2.0）· 用户文档
+# MaiMai DX 查分器插件（v3.3.0）· 用户文档
 
 > 面向**插件使用者**（MaiBot 服主 / 群友）的安装、配置与命令说明。
 > 开发者请阅读 [DEVELOPMENT.md](DEVELOPMENT.md)。
@@ -8,7 +8,7 @@
 B50 成绩图、个人成绩、曲目搜索、猜歌、谱面统计、今日运势、热门/排行，以及落雪独有
 的热力图、趋势、历史、排行、年度回顾、收藏品、双向成绩同步等能力。
 
-> **插件版本**: 3.2.0 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
+> **插件版本**: 3.3.0 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
 > **水鱼 API**: <https://www.diving-fish.com/api/maimaidxprober>
 > **lxns API**: <https://maimai.lxns.net/api/v0>
 
@@ -35,8 +35,8 @@ B50 成绩图、个人成绩、曲目搜索、猜歌、谱面统计、今日运�
 - **B50 成绩图**：AWMC/Yuzu 原版版式（Resource CN1.55 static 素材、
   1400x1600 固定画布、难度贴图成绩卡、评级/FC/FS/DX 星、头像、
   段位/阶级徽章）；BEST 35 / BEST 15 不足时保持空白槽位。
-- **其它信息查询**：个人成绩、歌曲、帮助、热力图等继续使用原来的浅色面板渲染，
-  不受 B50 版式调整影响。
+- **信息卡渲染**：B50/AP50、单曲详情（`chart_info`）与单曲最佳（`play_info`）
+  使用 AWMC/Yuzu 原版贴图；个人成绩、帮助、热力图等继续使用浅色面板。
 - **个人成绩摘要**：Rating、段位、曲目数、难度分布、Top 10 成绩。
 - **曲目搜索与详情**：名称/作者/ID/别称搜索，封面 + 落雪补全（分类/版本/谱师/定数）。
 - **猜歌（Maidle）**：水鱼猜歌游戏，图片线索反馈。
@@ -49,7 +49,7 @@ B50 成绩图、个人成绩、曲目搜索、猜歌、谱面统计、今日运�
   年度回顾、收藏品实物图、玩家资料卡、AP50、按 QQ 查玩家。
 - **成绩双向同步**：水鱼 → 落雪（`/mai lxns upload`）、落雪 → 水鱼（`/mai df upload`），
   均采用**只升不降**策略。
-- **全部交互命令图片化**：统一 B50 同风格浅色面板。
+- **全部交互命令图片化**：统一马卡龙浅色面板 + AWMC/Yuzu 原版信息卡风格。
 
 ## 安装
 
@@ -110,7 +110,7 @@ developer_qq = []            # 允许使用开发者凭证的 QQ 号列表；为
 base_url = "https://www.diving-fish.com/api/maimaidxprober"
 request_timeout = 30
 music_cache_ttl = 300
-developer_token = ""         # 水鱼开发者 API 密钥（/mai plate 的 OAuth 回退方案）
+developer_token = ""         # 旧版水鱼开发者 API 密钥（/mai plate 回退；2026-10-01 起停止服务）
 enable_oauth = true          # 是否启用水鱼 OAuth（公开客户端设备码绑定）
 oauth_issuer = "https://auth.diving-fish.com"
 oauth_client_id = "4e9a24a7180a22ce5fbb93237d245a74"  # 公开客户端 client_id（可随模板分发）
@@ -172,48 +172,67 @@ no_sandbox = true
 
 ## 命令速查
 
-### 基础命令（`/mai`）
+### 命令入口（`/mai`）
 
 | 命令 | 说明 | 输出 |
 |------|------|------|
-| `/mai help` | 命令总览 | 图片 |
+| `/mai help` | 命令总览（入口页） | 图片 |
+| `/mai df help` | 水鱼（diving-fish）专属命令帮助 | 图片 |
+| `/mai lxns help` | 落雪（lxns）专属命令帮助 | 图片 |
+
+### 通用命令（`/mai`）
+
+| 命令 | 说明 | 输出 |
+|------|------|------|
 | `/mai song <关键词/ID>` | 搜索曲目；ID 直接查看详情 | 图片 |
 | `/mai today` | 今日运势 — 宜忌与推荐歌曲 | 图片 |
 | `/mai maidle` | 开始 Maidle 猜歌游戏 | 图片 |
 | `/mai maidle guess <ID/名称>` | 猜歌 — 提交猜测 | 图片 |
-| `/mai maidle answer` | 猜歌 — 查看答案 | 图片 |
 | `/mai maidle help` | 猜歌规则说明 | 图片 |
+| `/mai maidle answer` | 猜歌 — 查看答案并结束本轮 | 图片 |
 | `/mai charts` | 全谱面难度分布统计 | 图片 |
-| `/mai hot [N]` | 热门歌曲 TOP N（新曲/高难度加权） | 图片 |
-| `/mai ranking [N]` | DX Rating 排行榜 TOP N | 图片 |
 | `/mai status` | 双服状态检测（水鱼 + 落雪） | 图片 |
-| `/mai pick <A> <B> [C] [D]` | 随机帮你选一个 | 图片 |
-| `/mai plate <版本代号>` | 按版本查询已绑定账号成绩（水鱼 OAuth，或回退 Developer-Token） | 图片 |
+| `/mai pick <A> <B> [C] [D]` | 随机帮你选一个（2~4 项） | 图片 |
 | `/mai alias add <ID> <名称>` | 添加本地别称 | 文本 |
 | `/mai alias del <ID> <名称>` | 删除本地别称 | 文本 |
 | `/mai alias list <ID>` | 查看别称 | 图片 |
 | `/mai alias import` | 从 lxns 导入社区别名 | 文本 |
-| `/mai df bind` | 发起水鱼 OAuth 绑定（设备码） | 文本 |
-| `/mai df bind confirm` | 确认水鱼 OAuth 绑定结果 | 文本 |
-| `/mai df unbind` | 解除水鱼 OAuth 绑定 | 文本 |
-| `/mai df status` | 查看水鱼 OAuth 绑定状态 | 文本 |
 
-### 成绩查询（`/mai`）
+### 双源成绩查询（`/mai`）
 
 | 命令 | 说明 | 输出 |
 |------|------|------|
 | `/mai b50 [用户] [--lxns\|--df]` | Best 50 成绩图；可强制指定数据源 | 图片 |
-| `/mai my [--lxns\|--df]` | 个人成绩摘要（需绑定 Token） | 图片 |
-| `/mai bind <Token>` | 绑定水鱼成绩导入 Token | — |
-| `/mai unbind` | 解除绑定 | — |
+| `/mai my [--lxns\|--df]` | 个人成绩摘要；可强制指定数据源 | 图片 |
 
 > **强制数据源**：默认自动选源（绑定落雪 → 开发者好友码 → 水鱼兜底）。
-> `--lxns` 强制用落雪，`--df` 强制用水鱼。例：`/mai b50 --lxns 123456789012`、
+> `--lxns` / `--落雪` 强制用落雪，`--df` / `--水鱼` 强制用水鱼；来源标志可以放在
+> 用户参数之前或之后。例：`/mai b50 --lxns 123456789012`、`/mai b50 123456789012 --lxns`、
 > `/mai my --df`。强制落雪需先绑定落雪；强制水鱼需绑定 Token 或提供用户名。
 > 其中好友码查询走落雪开发者 API，需服主配置 `developer_api_key` 并把你的 QQ
 > 加入 `developer_qq` 白名单，否则会提示无权限。
 
-### 落雪账号（`/mai lxns`）
+### 水鱼命令（`/mai df help`）
+
+| 命令 | 说明 | 输出 |
+|------|------|------|
+| `/mai df bind` | 发起水鱼 OAuth 绑定（设备码） | 文本 |
+| `/mai df bind confirm` | 确认水鱼 OAuth 绑定结果 | 文本 |
+| `/mai df unbind` | 解除水鱼 OAuth 绑定 | 文本 |
+| `/mai df status` | 查看水鱼 OAuth 绑定状态 | 文本 |
+| `/mai bind <Token>` | 绑定旧版水鱼成绩导入 Token | 文本 |
+| `/mai unbind` | 解除旧版 Import-Token 绑定（不影响 OAuth） | 文本 |
+| `/mai b50 [用户] --df` | 强制使用水鱼 Best 50 | 图片 |
+| `/mai my --df` | 强制使用水鱼个人成绩摘要 | 图片 |
+| `/mai plate <版本代号>` | 按版本查询已绑定账号成绩（优先 OAuth） | 图片 |
+| `/mai hot [N]` | 热门歌曲 TOP N（新曲/高难度加权，1~30） | 图片 |
+| `/mai ranking [N]` | DX Rating 排行榜 TOP N（1~50） | 图片 |
+| `/mai df upload` | 落雪成绩同步到水鱼（反向，只升不降） | 文本 |
+
+> 水鱼 OAuth 查询对象由授权令牌决定，无需再传用户名。旧 Developer-Token 回退与
+> 水鱼官方迁移同步停止：2026-10-01 00:00（UTC+8）后不再可用。
+
+### 落雪命令（`/mai lxns help`）
 
 > 落雪独有能力。绑定落雪后 `/mai b50`、`/mai my` 自动切换为落雪数据源；
 > 未绑定/未配置时命令给出引导提示，不影响水鱼功能。
@@ -226,18 +245,25 @@ no_sandbox = true
 | `/mai lxns unbind` | 解除绑定 | — |
 | `/mai lxns status` | 查看绑定状态与开发者权限 | 图片 |
 | `/mai lxns player [好友码]` | 玩家资料卡（头像/段位/装备/同步时间） | 图片 |
+| `/mai lxns best [好友码] <曲名/ID>` | 单曲所有谱面最佳成绩 | 图片 |
+| `/mai lxns ap50 <好友码>` | All Perfect 50（开发者模式） | 图片 |
+| `/mai lxns qq <QQ号>` | 按 QQ 查玩家资料（开发者模式） | 图片 |
+| `/mai b50 [用户] --lxns` | 强制使用落雪 Best 50 | 图片 |
+| `/mai my --lxns` | 强制使用落雪个人成绩摘要 | 图片 |
 | `/mai lxns heatmap` | 成绩上传热力图 | 图片 |
 | `/mai lxns trend [版本号]` | DX Rating 趋势 | 图片 |
 | `/mai lxns history <曲名/ID>` | 单曲游玩历史（遍历全部难度） | 图片 |
 | `/mai lxns rank <曲名/ID>` | 单曲分数排行 | 图片 |
 | `/mai lxns year [年份]` | 年度回顾（评级/FC/难度/常玩/Rating 成长） | 图片 |
 | `/mai lxns collections` | 收藏品（称号/头像/姓名框/背景实物图） | 图片 |
-| `/mai lxns best [好友码] <曲名>` | 单曲所有谱面最佳成绩 | 图片 |
 | `/mai lxns upload` | 水鱼成绩同步到落雪（只升不降） | 文本 |
-| `/mai df upload` | 落雪成绩同步到水鱼（反向，只升不降） | 文本 |
-| `/mai lxns ap50 <好友码>` | All Perfect 50（开发者模式） | 图片 |
-| `/mai lxns qq <QQ号>` | 按 QQ 查玩家资料（开发者模式） | 图片 |
-| `/mai lxns comment list/post/like` | 曲目评论（落雪服务端暂未开放） | 文本 |
+| `/mai lxns comment list <曲名/ID>` | 查看曲目评论（OAuth） | 文本 |
+| `/mai lxns comment <曲名/ID> <内容>` | 发表曲目评论（OAuth） | 文本 |
+| `/mai lxns comment like <评论ID>` | 点赞曲目评论（OAuth） | 文本 |
+
+> 评论接口仅支持 OAuth 绑定；落雪服务端暂未开放时应返回友好提示。
+> AP50、按 QQ 查玩家和好友码查询需要管理员配置落雪开发者密钥并把你的 QQ
+> 加入 `developer_qq` 白名单，否则会提示无权限。
 
 ### AI 工具
 
@@ -329,7 +355,7 @@ no_sandbox = true
 | 落雪个人 API 密钥 | `lxns_bindings.json` | 读取 / 上传落雪成绩 | 落雪「账号详情页」重新生成 |
 | 落雪 OAuth 令牌（access / refresh） | `lxns_bindings.json` | 以账号身份访问落雪 | 落雪「已授权应用」撤销授权 |
 | 落雪开发者密钥（全局） | `config.toml` | 好友码 / AP50 / 按 QQ 查询 | 落雪开发者面板重置 |
-| 水鱼 Developer-Token（全局） | `config.toml` | `/mai plate` 按版本查询 | 水鱼开发者面板重置 |
+| 水鱼 Developer-Token（全局） | `config.toml` | `/mai plate` 旧版回退（2026-10-01 停止服务） | 水鱼开发者面板重置，或改用 OAuth |
 
 安全要点：
 
@@ -370,7 +396,7 @@ no_sandbox = true
 
 ---
 
-**插件版本**: 3.2.0
+**插件版本**: 3.3.0
 **插件 ID**: `deepseek-v4-pro.maimaidx-prober`  
 **更新日志**: [CHANGELOG.md](CHANGELOG.md)  
 **开发者文档**: [DEVELOPMENT.md](DEVELOPMENT.md)

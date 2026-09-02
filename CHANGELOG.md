@@ -2,20 +2,35 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## 当前状态（2026-09-02）
+## [3.3.0] - 2026-09-03
 
-> 项目处于**开发中的半成品**状态：功能链路可用，但打磨程度不均衡。
+> v3.3 完成信息卡 AWMC 化、帮助页拆分与双源细节打磨。
 
-- **B50 成绩图渲染相对完善**：已切换为 AWMC/Yuzu 原版渲染
-  （Resource CN1.55 static 素材 + Pillow 拼版，1400x1600 固定画布、
-  五列难度贴图成绩卡、评级/FC/FS/DX 星、头像/段位/阶级等头部信息）；
-- **其余图片渲染**（my / song / today / help / heatmap / trend / maidle /
-  history / rank / year / collections / pick / status / charts / alias /
-  lxns status / player / plate）保持原有浅色面板，不受 B50 版式调整影响；
-- **水鱼账号 OAuth 已接入**：公开客户端设备码绑定、每用户 refresh token、
-  Bearer 查询，保留旧 Import-Token / Developer-Token 回退；
-- 新增快速回归脚本 `scripts/quick_command_test.py`，当前 49 项全通过。
-- 使用文档见 [README.md](README.md)，开发文档见 [DEVELOPMENT.md](DEVELOPMENT.md)。
+### 今日运势卡片
+
+- `/mai today` 加入 7 套随机角色主题（prism_plus / circle 立绘与 AWMC 前景 logo）；
+- 封面下方补充曲目 ID 与类型，定数改为按难度分色的标签列表，祝福语并入页脚。
+
+### 信息卡 AWMC 化
+
+- `/mai song` 单曲详情改用 AWMC `chart_info` 模板 Pillow 拼版（新增 `render_song_info`）；
+- 落雪 `/mai lxns best` 改用 AWMC `play_info` 模板（新增 `render_play_info`），
+  展示达成率 / RA / DX 分数与星数 / 评级 / FC / FS；
+- B50 渲染补充渐变背景、随机默认头像与落雪年份页脚素材。
+- 补齐 AWMC `chart_info` 底部评级预估 RA 卡片，并修正水鱼 notes 的
+  TOUCH / BREAK 列位。
+
+### 帮助页拆分
+
+- `/mai help` 改为命令总览入口；新增 `/mai df help` 与 `/mai lxns help`，
+  落雪页采用双列命令网格；Maidle 说明保留为 `/mai maidle help`。
+
+### 细节修复
+
+- `/mai b50` / `/mai my` 支持 `--水鱼` / `--落雪` 中文来源标志，且可放在用户参数前后；
+- 落雪头像改用 `assets2.lxns.net` 原始 PNG，规避 WAF；
+- 水鱼旧 Developer-Token 回退标注 2026-10-01 停止服务；
+- 快速回归脚本补齐三页帮助与两个 Pillow 渲染器检查。
 
 ## [3.2.0] - 2026-09-02
 
@@ -252,3 +267,4 @@
 [1.1.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v1.0.0
 [3.2.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.2.0
+[3.3.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.3.0

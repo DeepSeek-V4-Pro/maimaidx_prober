@@ -127,7 +127,6 @@ async def main():
     from core.services import (
         CoverService,
         DivingFishOAuthService,
-        HtmlRenderer,
         LxnsAuthService,
         MusicService,
         PlayerQueryService,
@@ -139,15 +138,16 @@ async def main():
         LxnsBindingStore,
     )
     from core.renderers import (
-        render_aliases,
         render_b50,
         render_best,
         render_charts,
         render_collections,
+        render_df_help,
         render_heatmap,
         render_help,
         render_history,
         render_hot,
+        render_lxns_help,
         render_lxns_status,
         render_maidle_answer,
         render_maidle_guess,
@@ -155,10 +155,12 @@ async def main():
         render_my,
         render_pick,
         render_plate,
+        render_play_info,
         render_player,
         render_rank,
         render_ranking,
         render_song_detail,
+        render_song_info,
         render_status,
         render_today,
         render_trend,
@@ -315,6 +317,25 @@ async def main():
         song = matched[0] if matched else {}
         cover = await covers.get_cover_data_url(str(song.get("id", "0")))
         record("cover_cover", bool(cover), "")
+        song_png = await render_song_info(
+            song, cover or "", {"genre_name": "测试", "difficulties": {}}
+        )
+        record("render_song_info_pillow", bool(song_png), f"png={len(song_png)}")
+        play_png = await render_play_info(
+            song,
+            [{
+                "music_id": str(song.get("id", "1")),
+                "level_index": 3,
+                "achievement": 100.5,
+                "ra": 300,
+                "dxScore": 100,
+                "fc": "ap",
+                "fs": "fsd",
+            }],
+            "落雪",
+            cover or "",
+        )
+        record("render_play_info_pillow", bool(play_png), f"png={len(play_png)}")
 
         # ---- 落雪服务 ----
         lxns_auth_data, lxns_auth_err = await lxns_auth.get_auth(QQ)
@@ -395,6 +416,8 @@ async def main():
 
         # ---- 渲染器 ----
         await render_check("render_help", render_help)
+        await render_check("render_df_help", render_df_help)
+        await render_check("render_lxns_help", render_lxns_help)
         await render_check("render_maidle_help", render_maidle_help)
         if song:
             extra = await music.enrich_with_lxns(song)

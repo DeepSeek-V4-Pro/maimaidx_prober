@@ -22,12 +22,21 @@ def doc(style_extra: str, body: str) -> str:
     )
 
 
-def cmd_section(label: str, cmds: list[tuple[str, str]], name_width: str = "380px") -> str:
+def cmd_section(
+    label: str,
+    cmds: list[tuple[str, str]],
+    name_width: str = "380px",
+    columns: int = 1,
+) -> str:
+    """生成帮助分区；``columns=2`` 时使用双列命令网格。"""
     items = "".join(
-        f'<div class="cmd"><span class="cmd-name">{_html.escape(c[0])}</span>'
+        f'<div class="cmd"><span class="cmd-name" style="width:{name_width}">'
+        f"{_html.escape(c[0])}</span>"
         f'<span class="cmd-desc">{_html.escape(c[1])}</span></div>'
         for c in cmds
     )
+    if columns > 1:
+        items = f'<div class="cmd-grid">{items}</div>'
     return (
         f'<div class="section"><div class="sec-label">{_html.escape(label)}</div>{items}</div>'
     )

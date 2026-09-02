@@ -189,12 +189,12 @@ class DivingFishApiClient:
         developer_token: str = "",
         auth: dict = None,
     ) -> dict:
-        """按版本查询成绩（OAuth 走 /player/plate，否则 Developer-Token 走 /query/plate）。
+        """按版本查询成绩（OAuth 走 /player/plate，否则旧 Developer-Token 走 /query/plate）。
 
         target 为用户名或 QQ 号（OAuth 时忽略，按 Bearer 定位本人）；versions
         接受中文单字代号（真/超/檄/.../鏡/鏡+）或完整版本名称
         （maimai PLUS / maimai でらっくす PRiSM 等），发送前统一转换为服务端
-        要求的完整版本名称。
+        要求的完整版本名称。旧回退路径将于 2026-10-01 随水鱼官方迁移停止。
         """
 
         full_versions = [

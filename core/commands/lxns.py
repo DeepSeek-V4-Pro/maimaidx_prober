@@ -17,11 +17,12 @@ from maibot_sdk import Command
 from ..clients.lxns import LxnsApiClient
 from ..renderers import (
     render_b50,
-    render_best,
     render_collections,
     render_heatmap,
     render_history,
+    render_lxns_help,
     render_lxns_status,
+    render_play_info,
     render_player,
     render_rank,
     render_trend,
@@ -34,6 +35,22 @@ logger = logging.getLogger(__name__)
 
 
 class LxnsCommandsMixin(SharedHelpersMixin):
+
+    @Command(
+        "mai_lxns_help",
+        description="查看落雪（lxns）专属命令帮助",
+        pattern=r"^/mai lxns help\s*$",
+    )
+    async def handle_lxns_help(
+        self, stream_id: str = "", **kwargs: Any
+    ) -> tuple:
+        await self._track_user(stream_id, self._get_user_id(kwargs))
+        ok = await self._render_and_send(
+            stream_id,
+            lambda: render_lxns_help(self._renderer),
+            "落雪帮助图片生成失败",
+        )
+        return ok, "显示落雪帮助", True
 
     # ---- 绑定管理 ----
 
@@ -549,10 +566,14 @@ class LxnsCommandsMixin(SharedHelpersMixin):
         if not rows:
             await self.ctx.send.text(f"「{data['title']}」暂无最佳成绩", stream_id)
             return False, "无记录", True
+        song = data.get("song") or {}
+        song_id = str(data.get("song_id") or song.get("id") or "")
+        cover = await self._covers.get_cover_data_url(song_id)
+        await self.ctx.send.text("正在生成游玩信息图片，请稍候...", stream_id)
         ok = await self._render_and_send(
             stream_id,
-            lambda: render_best(self._renderer, data["title"], rows),
-            "最佳成绩图片生成失败",
+            lambda: render_play_info(song, rows, "落雪", cover or ""),
+            "游玩信息图片生成失败",
         )
         return ok, "显示最佳成绩", True
 

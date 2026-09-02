@@ -1,4 +1,4 @@
-"""MaiMai DX 查分器核心包 (v3.2)。"""
+"""MaiMai DX 查分器核心包 (v3.3)。"""
 
 from .plugin import MaiMaiDXPlugin, create_plugin
 

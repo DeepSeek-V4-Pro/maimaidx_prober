@@ -18,7 +18,7 @@ from ..renderers import (
     render_hot,
     render_pick,
     render_ranking,
-    render_song_detail,
+    render_song_info,
     render_status,
     render_today,
 )
@@ -121,19 +121,17 @@ class BasicCommandsMixin(SharedHelpersMixin):
                 if isinstance(music, dict) and str(music.get("id", "") or "") == keyword:
                     sid = str(music.get("id", ""))
                     cover = await self._covers.get_cover_data_url(sid)
-                    if cover:
-                        await self.ctx.send.text("正在生成详情图片...", stream_id)
-                        aliases = await self._aliases.list_aliases(sid)
-                        extra = await self._music.enrich_with_lxns(music)
-                        rendered = await self._render_and_send(
-                            stream_id,
-                            lambda: render_song_detail(
-                                self._renderer, music, cover, aliases, extra,
-                            ),
-                            "曲目详情图片生成失败",
-                        )
-                        if rendered:
-                            return True, "显示详情", True
+                    extra = await self._music.enrich_with_lxns(music)
+                    await self.ctx.send.text("正在生成详情图片...", stream_id)
+                    rendered = await self._render_and_send(
+                        stream_id,
+                        lambda m=music, c=cover, e=extra: render_song_info(
+                            m, c or "", e
+                        ),
+                        "曲目详情图片生成失败",
+                    )
+                    if rendered:
+                        return True, "显示详情", True
                     detail = await self._build_song_detail_text(music)
                     await self.ctx.send.text(detail, stream_id)
                     return True, "显示详情", True
@@ -154,19 +152,15 @@ class BasicCommandsMixin(SharedHelpersMixin):
             music = matches[0]
             sid = str(music.get("id", "") or "")
             cover = await self._covers.get_cover_data_url(sid)
-            if cover:
-                await self.ctx.send.text("正在生成详情图片...", stream_id)
-                aliases = await self._aliases.list_aliases(sid)
-                extra = await self._music.enrich_with_lxns(music)
-                rendered = await self._render_and_send(
-                    stream_id,
-                    lambda: render_song_detail(
-                        self._renderer, music, cover, aliases, extra,
-                    ),
-                    "曲目详情图片生成失败",
-                )
-                if rendered:
-                    return True, "显示详情", True
+            extra = await self._music.enrich_with_lxns(music)
+            await self.ctx.send.text("正在生成详情图片...", stream_id)
+            rendered = await self._render_and_send(
+                stream_id,
+                lambda: render_song_info(music, cover or "", extra),
+                "曲目详情图片生成失败",
+            )
+            if rendered:
+                return True, "显示详情", True
             detail = await self._build_song_detail_text(music)
             await self.ctx.send.text(detail, stream_id)
             return True, "显示详情", True

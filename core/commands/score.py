@@ -18,7 +18,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
 
     @Command(
         "mai_b50",
-        description="查询舞萌 DX Best 50 成绩，生成图片",
+        description="查询舞萌 DX Best 50 成绩（水鱼/落雪自动选源），生成图片",
         pattern=r"^/mai b50(\s+(?P<target>.+))?\s*$",
     )
     async def handle_b50(
@@ -29,15 +29,21 @@ class ScoreCommandsMixin(SharedHelpersMixin):
 
         target = ""
         force = ""
+        source_flags = {
+            "--lxns": "lxns",
+            "--落雪": "lxns",
+            "--df": "water_fish",
+            "--水鱼": "water_fish",
+        }
         if matched_groups and matched_groups.get("target"):
-            raw = matched_groups["target"].strip()
-            tokens = raw.split(None, 1)
-            flag = tokens[0].lower() if tokens else ""
-            if flag in ("--lxns", "--df", "--落雪", "--水鱼"):
-                force = "lxns" if flag in ("--lxns", "--落雪") else "water_fish"
-                target = tokens[1].strip() if len(tokens) > 1 else ""
-            else:
-                target = raw
+            target_parts: list[str] = []
+            for part in matched_groups["target"].strip().split():
+                normalized = part.lower()
+                if normalized in source_flags:
+                    force = source_flags[normalized]
+                else:
+                    target_parts.append(part)
+            target = " ".join(target_parts)
 
         ok, data, err = await self._players.get_b50(user_id, target, force)
         if not ok:
@@ -71,7 +77,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
 
     @Command(
         "mai_bind",
-        description="绑定水鱼查分器的成绩导入Token",
+        description="绑定水鱼查分器旧版成绩导入 Token",
         pattern=r"^/mai bind\s+(?P<token>\S+)\s*$",
     )
     async def handle_bind(
@@ -124,7 +130,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
 
     @Command(
         "mai_unbind",
-        description="解除水鱼查分器账号绑定",
+        description="解除水鱼 Import-Token 绑定（不影响 OAuth）",
         pattern=r"^/mai unbind\s*$",
     )
     async def handle_unbind(self, stream_id: str = "", **kwargs: Any) -> tuple:
@@ -139,7 +145,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
 
     @Command(
         "mai_my",
-        description="查看个人成绩摘要",
+        description="查看个人成绩摘要（水鱼/落雪自动选源）",
         pattern=r"^/mai my(\s+(?P<source>--\w+))?\s*$",
     )
     async def handle_my(self, stream_id: str = "", **kwargs: Any) -> tuple:
@@ -180,7 +186,7 @@ class ScoreCommandsMixin(SharedHelpersMixin):
 
     @Command(
         "mai_plate",
-        description="按版本查询水鱼成绩（OAuth 或 Developer-Token）",
+        description="按版本查询水鱼绑定账号成绩（优先 OAuth）",
         pattern=r"^/mai plate\s+(?P<versions>.+)\s*$",
     )
     async def handle_plate(

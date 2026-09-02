@@ -83,6 +83,36 @@ class PlayerQueryService:
 
         return bool(self._developer_qq) and str(user_id) in self._developer_qq
 
+    async def _resolve_lxns_avatar_url(self, user_id: str, target: str = "") -> str:
+        """优先解析落雪头像；本人才走账号绑定，好友码走开发者 API。"""
+
+        if self._lxns is None:
+            return ""
+        target = (target or "").strip()
+        if target:
+            if not _is_friend_code(target) or not self._developer_allowed(user_id):
+                return ""
+            dev_auth = self._auth_svc.developer_auth()
+            if not dev_auth:
+                return ""
+            player = await self._lxns.get_player(int(target), dev_auth)
+        else:
+            binding = await self._auth_svc.get_binding(user_id)
+            if not binding:
+                return ""
+            auth, err = await self._auth_svc.get_auth(user_id)
+            if not auth or err:
+                return ""
+            player = await self._lxns.get_user_player(auth)
+        if is_error(player) or not isinstance(player.get("data"), dict):
+            return ""
+        icon = player["data"].get("icon")
+        if not isinstance(icon, dict) or not icon.get("id"):
+            return ""
+        return LxnsApiClient.get_icon_url(
+            self._lxns.asset_url, int(icon["id"])
+        )
+
     # ---- 源解析 ----
 
     async def _resolve(
@@ -280,6 +310,7 @@ class PlayerQueryService:
         if not charts or (not charts.get("sd") and not charts.get("dx")):
             return False, {}, f"{query_target} 暂无成绩记录"
         all_records = (charts.get("sd") or []) + (charts.get("dx") or [])
+        avatar_url = await self._resolve_lxns_avatar_url(user_id, target)
         return True, {
             "source": "water_fish",
             "charts": charts,
@@ -287,6 +318,7 @@ class PlayerQueryService:
             "nickname": resp.get("nickname", query_target),
             "rating": resp.get("rating", 0),
             "query_time": query_time,
+            "avatar_url": avatar_url,
             "version": self._game_version,
             "course_rank": None,
             "class_rank": None,
@@ -1130,6 +1162,14 @@ class PlayerQueryService:
         if is_error(resp):
             return False, {}, error_msg(resp)
         charts = normalize_lxns_bests(resp.get("data"))
+        await self._enrich_with_df(charts.get("sd", []) + charts.get("dx", []))
+        df_song = await self._music.get_df_song_by_lxns_id(sid)
+        song_for_render = dict(lxns_song)
+        if df_song:
+            song_for_render["basic_info"] = dict(df_song.get("basic_info") or {})
+            song_for_render["level"] = df_song.get("level") or []
+            song_for_render["ds"] = df_song.get("ds") or []
+            song_for_render["charts"] = df_song.get("charts") or []
         rows: list[dict] = []
         for section, is_dx in (("sd", False), ("dx", True)):
             for rec in charts.get(section, []):
@@ -1144,10 +1184,16 @@ class PlayerQueryService:
                 except (TypeError, ValueError):
                     li = -1
                 rows.append({
+                    "music_id": sid,
+                    "level_index": li,
                     "level_name": DIFF_NAMES[li] if 0 <= li < 5 else str(rec.get("level_index", "?")),
                     "type": "DX" if is_dx else "SD",
                     "achievements": rec.get("achievements"),
+                    "achievement": rec.get("achievements"),
                     "dx_score": rec.get("dx_score"),
+                    "dxScore": rec.get("dx_score"),
+                    "ra": rec.get("ra", 0),
+                    "rate": rec.get("rate", ""),
                     "fc": rec.get("fc", ""),
                     "fs": rec.get("fs", ""),
                     "upload_time": _fmt_utc(
@@ -1157,6 +1203,7 @@ class PlayerQueryService:
         return True, {
             "song_id": sid,
             "title": str(lxns_song.get("title", "")),
+            "song": song_for_render,
             "rows": rows,
             "source": "lxns",
         }, ""

@@ -1,69 +1,192 @@
 # -*- coding: utf-8 -*-
-"""帮助图片渲染（v2.0 起统一命令前缀 /mai；v3.2 加入水鱼 OAuth）。"""
+"""帮助图片渲染：总览、水鱼专属、落雪专属与 Maidle 说明。"""
 
 from ..services.renderer import HtmlRenderer
 from .common import cmd_section, doc, footer_bar
 from .theme import panel_style
 
 
-async def render_help(renderer: HtmlRenderer) -> str:
-    sections = [
-        ("基础功能 (/mai)",
-         [("/mai song <关键词>", "搜索曲目，ID 直接查看详情"),
-          ("/mai today", "今日运势 — 随机推荐歌曲"),
-          ("/mai maidle", "猜歌游戏 (Maidle)"),
-          ("/mai charts", "全谱面难度分布统计"),
-          ("/mai hot [N]", "热门歌曲 TOP N"),
-          ("/mai ranking [N]", "DX Rating 排行榜 TOP N"),
-          ("/mai status", "服务器状态检测 (双服)"),
-          ("/mai pick <A> <B> [C] [D]", "随机帮你选一个"),
-          ("/mai help", "显示本帮助")]),
-        ("别称管理 (/mai alias)",
-         [("/mai alias add <ID> <名称>", "添加别称"),
-          ("/mai alias del <ID> <名称>", "删除别称"),
-          ("/mai alias list <ID>", "查看别称"),
-          ("/mai alias import", "导入 lxns 社区别名")]),
-        ("成绩查询 (/mai)",
-         [("/mai b50 [用户] [--lxns|--df]", "Best 50 图片；可强制指定数据源"),
-          ("/mai my [--lxns|--df]", "个人成绩摘要；可强制指定数据源"),
-          ("/mai bind <Token>", "绑定成绩导入 Token"),
-          ("/mai unbind", "解除绑定"),
-          ("/mai plate <版本>", "按版本查询成绩（OAuth/Developer-Token）")]),
-        ("水鱼账号 (/mai df)",
-         [("/mai df bind", "水鱼 OAuth 设备码绑定"),
-          ("/mai df bind confirm", "确认水鱼绑定结果"),
-          ("/mai df unbind", "解除水鱼 OAuth 绑定"),
-          ("/mai df status", "查看水鱼绑定状态")]),
-        ("落雪账号 (/mai lxns)",
-         [("/mai lxns bind", "OAuth 授权绑定落雪账号"),
-          ("/mai lxns bind token <密钥>", "用个人 API 密钥绑定"),
-          ("/mai lxns bind code <授权码>", "用授权码完成 OAuth 绑定"),
-          ("/mai lxns unbind", "解除落雪绑定"),
-          ("/mai lxns status", "查看绑定状态"),
-          ("/mai lxns player [好友码]", "玩家资料卡"),
-          ("/mai lxns ap50 <好友码>", "All Perfect 50（开发者模式）"),
-          ("/mai lxns heatmap", "上传热力图"),
-          ("/mai lxns trend [版本]", "DX Rating 趋势"),
-          ("/mai lxns history <曲名>", "单曲游玩历史"),
-          ("/mai lxns rank <曲名>", "单曲分数排行"),
-          ("/mai lxns year [年份]", "年度回顾"),
-          ("/mai lxns collections", "收藏品（称号/头像等）"),
-          ("/mai lxns upload", "水鱼成绩同步到落雪（只升不降）"),
-          ("/mai df upload", "落雪成绩同步到水鱼（反向，只升不降）"),
-          ("/mai lxns best [好友码] <曲名>", "单曲所有谱面最佳成绩"),
-          ("/mai lxns qq <QQ号>", "按 QQ 查玩家资料（开发者模式）"),
-          ("/mai lxns comment list <曲名>", "查看曲目评论（服务端未开放时不可用）")]),
-    ]
-    style = ".cmd-name{width:380px;font-size:18px}.cmd-desc{font-size:18px}"
+async def _render_command_help(
+    renderer: HtmlRenderer,
+    title: str,
+    subtitle: str,
+    sections: list,
+    width: int,
+    height: int,
+    style_extra: str = "",
+    note: str = "",
+    footer: str = "数据来源: maimai",
+) -> str:
+    """按同一设计系统渲染命令帮助页。"""
+    note_html = f'<div class="help-note">{note}</div>' if note else ""
+    style = (
+        ".cmd-desc{font-size:18px}"
+        ".help-note{margin-top:14px;padding:10px 14px;border-radius:10px;"
+        "background:#F6F2FC;color:#6B5D8A;font-size:15px;line-height:1.7}"
+        + style_extra
+    )
     body = (
         '<div class="panel">'
-        '<div class="p-title">MaiMai DX 查分器</div>'
-        '<div class="p-sub">diving-fish + lxns 双源查分 · 水鱼/落雪均支持 OAuth 绑定</div>'
+        f'<div class="p-title">{title}</div>'
+        f'<div class="p-sub">{subtitle}</div>'
         + "".join(cmd_section(label, cmds) for label, cmds in sections)
-        + footer_bar("数据来源: maimai")
+        + note_html
+        + footer_bar(footer)
         + "</div>"
     )
-    return await renderer.render(doc(panel_style(style), body), width=1080, height=1040)
+    return await renderer.render(doc(panel_style(style), body), width=width, height=height)
+
+
+async def render_help(renderer: HtmlRenderer) -> str:
+    sections = [
+        ("双源成绩查询 (/mai)",
+         [
+             ("/mai b50 [用户] [--lxns|--df]", "Best 50 成绩图，来源标志可放在用户前后"),
+             ("/mai my [--lxns|--df]", "个人成绩摘要，可强制指定数据源"),
+         ]),
+        ("通用功能 (/mai)",
+         [
+             ("/mai song <关键词/ID>", "搜索曲目；ID 直接查看详情"),
+             ("/mai today", "今日宜忌与推荐歌曲"),
+             ("/mai charts", "全谱面难度分布统计"),
+             ("/mai status", "水鱼 + 落雪服务器状态"),
+             ("/mai pick <A> <B> [C] [D]", "随机选择（2~4 个选项）"),
+             ("/mai maidle", "开始 Maidle 猜歌游戏"),
+             ("/mai maidle guess <ID/名称>", "提交猜歌"),
+             ("/mai maidle help", "猜歌规则说明"),
+             ("/mai maidle answer", "查看答案并结束本轮"),
+         ]),
+        ("别称管理 (/mai alias)",
+         [
+             ("/mai alias add <ID> <名称>", "添加本地别称"),
+             ("/mai alias del <ID> <名称>", "删除本地别称"),
+             ("/mai alias list <ID>", "查看歌曲别称"),
+             ("/mai alias import", "从 lxns 导入社区别名"),
+         ]),
+        ("平台帮助",
+         [
+             ("/mai df help", "水鱼（diving-fish）专属命令"),
+             ("/mai lxns help", "落雪（lxns）专属命令"),
+         ]),
+    ]
+    note = (
+        "数据源自动选择顺序：已绑定落雪 → 落雪；开发者好友码 → 落雪；否则 → 水鱼。"
+        "需要固定来源时可使用 --lxns / --df。"
+    )
+    return await _render_command_help(
+        renderer,
+        "MaiMai DX 查分器",
+        "命令总览 · 水鱼 / 落雪请查看对应专属帮助",
+        sections,
+        1080,
+        980,
+        note=note,
+        footer="数据来源: diving-fish · lxns",
+    )
+
+
+async def render_df_help(renderer: HtmlRenderer) -> str:
+    sections = [
+        ("水鱼账号绑定 (/mai df)",
+         [
+             ("/mai df bind", "发起 OAuth 设备码绑定"),
+             ("/mai df bind confirm", "确认绑定结果"),
+             ("/mai df unbind", "解除水鱼 OAuth 绑定"),
+             ("/mai df status", "查看 OAuth 绑定状态"),
+             ("/mai bind <Token>", "绑定旧版成绩导入 Token"),
+             ("/mai unbind", "解除旧版 Token 绑定（不影响 OAuth）"),
+         ]),
+        ("成绩与排行 (/mai)",
+         [
+             ("/mai b50 [用户] --df", "强制水鱼 Best 50"),
+             ("/mai my --df", "强制水鱼个人成绩摘要"),
+             ("/mai plate <版本代号>", "按版本查询已绑定账号（优先 OAuth）"),
+             ("/mai hot [N]", "热门歌曲 TOP N（1~30）"),
+             ("/mai ranking [N]", "DX Rating 排行 TOP N（1~50）"),
+         ]),
+        ("数据同步 (/mai df)",
+         [
+             ("/mai df upload", "落雪成绩同步到水鱼（只升不降）"),
+         ]),
+    ]
+    note = (
+        "水鱼 OAuth 查询对象由授权令牌决定，无需再传用户名。"
+        "旧 Developer-Token 回退将与水鱼官方迁移同步停止（2026-10-01 起不再可用）。"
+    )
+    return await _render_command_help(
+        renderer,
+        "水鱼（diving-fish）命令",
+        "OAuth 绑定、旧版 Token、成绩查询与同步",
+        sections,
+        1080,
+        920,
+        note=note,
+        footer="数据来源: diving-fish",
+    )
+
+
+async def render_lxns_help(renderer: HtmlRenderer) -> str:
+    sections = [
+        ("落雪账号绑定 (/mai lxns)",
+         [
+             ("/mai lxns bind", "OAuth 授权绑定"),
+             ("/mai lxns bind token <密钥>", "用个人 API 密钥绑定"),
+             ("/mai lxns bind code <授权码>", "用授权码完成 OAuth 绑定"),
+             ("/mai lxns unbind", "解除落雪绑定"),
+             ("/mai lxns status", "查看绑定状态与开发者配置"),
+         ]),
+        ("玩家与成绩 (/mai lxns)",
+         [
+             ("/mai lxns player [好友码]", "玩家资料卡"),
+             ("/mai lxns best [好友码] <曲名/ID>", "单曲所有谱面最佳成绩"),
+             ("/mai lxns ap50 <好友码>", "All Perfect 50（开发者模式）"),
+             ("/mai lxns qq <QQ号>", "按 QQ 查玩家（开发者模式）"),
+             ("/mai b50 [用户] --lxns", "强制落雪 Best 50"),
+             ("/mai my --lxns", "强制落雪个人成绩摘要"),
+         ]),
+        ("趋势与回顾 (/mai lxns)",
+         [
+             ("/mai lxns heatmap", "成绩上传热力图"),
+             ("/mai lxns trend [版本号]", "DX Rating 趋势"),
+             ("/mai lxns history <曲名/ID>", "单曲游玩历史"),
+             ("/mai lxns rank <曲名/ID>", "单曲分数排行"),
+             ("/mai lxns year [年份]", "年度回顾"),
+             ("/mai lxns collections", "收藏品实物图"),
+         ]),
+        ("同步与评论 (/mai lxns)",
+         [
+             ("/mai lxns upload", "水鱼成绩同步到落雪（只升不降）"),
+             ("/mai lxns comment list <曲名/ID>", "查看评论（OAuth）"),
+             ("/mai lxns comment <曲名/ID> <内容>", "发表评论（OAuth）"),
+             ("/mai lxns comment like <评论ID>", "点赞评论（OAuth）"),
+         ]),
+    ]
+    note = (
+        "AP50、按 QQ 查玩家和好友码查询需管理员配置落雪开发者密钥并把 QQ 加入白名单。"
+        "评论接口仅支持 OAuth；落雪服务端暂未开放时会返回友好提示。"
+    )
+    style_extra = (
+        ".cmd-name{font-size:17px}"
+        ".cmd-desc{font-size:17px}"
+        ".cmd-grid{display:grid;grid-template-columns:1fr 1fr;"
+        "gap:6px 32px;align-items:start}"
+    )
+    sections = [
+        (label, cmds, "350px", 2) for label, cmds in sections
+    ]
+    body = (
+        '<div class="panel">'
+        '<div class="p-title">落雪（lxns）命令</div>'
+        '<div class="p-sub">绑定、玩家、趋势、同步与评论</div>'
+        + "".join(cmd_section(label, cmds, name_width=width, columns=columns)
+                  for label, cmds, width, columns in sections)
+        + f'<div class="help-note">{note}</div>'
+        + footer_bar("数据来源: maimai · lxns")
+        + "</div>"
+    )
+    return await renderer.render(
+        doc(panel_style(style_extra), body), width=1120, height=1040
+    )
 
 
 async def render_maidle_help(renderer: HtmlRenderer) -> str:

@@ -38,7 +38,7 @@ class ServerConfig(PluginConfigBase):
     music_cache_ttl: int = Field(default=300, description="曲库缓存时间(秒)")
     developer_token: str = Field(
         default="",
-        description="水鱼开发者 API 密钥（/mai plate 按版本查询成绩用；在水鱼开发者面板申请）",
+        description="水鱼旧版开发者 API 密钥（仅作 /mai plate 回退；2026-10-01 起停止服务）",
     )
     enable_oauth: bool = Field(
         default=False,
