@@ -207,7 +207,7 @@ async def handle_xxx(self, stream_id: str = "", matched_groups: dict = None, **k
 
 1. `core/config.py` 对应 pydantic 模型加字段（`Field(default=..., description=...)`）；
 2. 同步 `config.toml` 模板与已部署实例的 `config.toml`（**保留线上密钥**）；
-3. 配置结构变化时按约定提升 `config_version`（当前 3.3 内不升大版本）；
+3. 配置结构变化时按约定提升 `config_version`（当前配置版本 3.3.0）；
 4. `on_config_update` 会自动重建渲染器与客户端，无需额外处理。
 
 ## 6. 数据模型要点

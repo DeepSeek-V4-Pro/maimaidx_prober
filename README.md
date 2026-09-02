@@ -101,7 +101,7 @@ python install_deps.py
 ```toml
 [plugin]
 enabled = true               # 是否启用插件
-config_version = "3.2.0"     # 配置版本（请勿手动修改）
+config_version = "3.3.0"     # 配置版本（请勿手动修改）
 auto_install_deps = false    # 依赖缺失时自动安装
 game_version = 25500         # 落雪趋势接口默认版本（25500=舞萌DX 2026）
 developer_qq = []            # 允许使用开发者凭证的 QQ 号列表；为空则关闭全部开发者功能
