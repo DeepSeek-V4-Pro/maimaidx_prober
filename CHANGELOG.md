@@ -30,6 +30,7 @@
 - `/mai b50` / `/mai my` 支持 `--水鱼` / `--落雪` 中文来源标志，且可放在用户参数前后；
 - 落雪头像改用 `assets2.lxns.net` 原始 PNG，规避 WAF；
 - 水鱼旧 Developer-Token 回退标注 2026-10-01 停止服务；
+- `config_version` 同步至 `3.3.0`（`config.toml` / `core/config.py` / README 示例）；
 - 快速回归脚本补齐三页帮助与两个 Pillow 渲染器检查。
 
 ## [3.2.0] - 2026-09-02
