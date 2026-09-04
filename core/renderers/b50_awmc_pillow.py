@@ -6,6 +6,12 @@
 本渲染器只供 B50 / AP50 使用，其它信息查询仍使用 theme.panel_style()。
 """
 
+from collections.abc import Awaitable, Callable
+from pathlib import Path
+from typing import Any, Optional
+
+from PIL import Image, ImageDraw, ImageFont
+
 import asyncio
 import base64
 import concurrent.futures
@@ -14,11 +20,8 @@ import io
 import random
 import unicodedata
 import urllib.request
-from pathlib import Path
-from typing import Any
 
-from PIL import Image, ImageDraw, ImageFont
-
+from ..services.covers import sniff_mime
 from ..services.renderer import HtmlRenderer
 
 ASSETS_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "awmc_core"
@@ -209,7 +212,10 @@ def _font_path(assets: Path, torus: bool = False) -> Path:
         if torus
         else ("ResourceHanRoundedCN-Bold.ttf", "ResourceHanRoundedCN.otf")
     )
-    return next((font / name for name in names if (font / name).is_file()), font / names[0])
+    return next(
+        (font / name for name in names if (font / name).is_file()),
+        font / names[0],
+    )
 
 
 def _optional(
@@ -250,7 +256,27 @@ def _placeholder_cover(size: tuple[int, int]) -> Image.Image:
     return image
 
 
-@functools.lru_cache(maxsize=256)
+def _image_from_bytes(data: bytes) -> Image.Image | None:
+    if sniff_mime(data) is None:
+        return None
+    try:
+        with Image.open(io.BytesIO(data)) as source:
+            return source.convert("RGBA")
+    except Exception:
+        return None
+
+
+def _image_from_data_url(data_url: str) -> Image.Image | None:
+    if not data_url or "," not in data_url:
+        return None
+    try:
+        return _image_from_bytes(
+            base64.b64decode(data_url.split(",", 1)[1], validate=True)
+        )
+    except Exception:
+        return None
+
+
 def _fetch_image(url: str) -> Image.Image | None:
     if not url:
         return None
@@ -260,9 +286,50 @@ def _fetch_image(url: str) -> Image.Image | None:
         )
         with urllib.request.urlopen(request, timeout=10) as response:
             data = response.read()
-        return Image.open(io.BytesIO(data)).convert("RGBA")
+        return _image_from_bytes(data)
     except Exception:
         return None
+
+
+def _df_cover_id(song_id: Any) -> str:
+    try:
+        sid = int(song_id)
+    except (TypeError, ValueError):
+        return str(song_id or "").zfill(5)
+    if 10001 <= sid <= 11000:
+        sid -= 10000
+    return str(sid).zfill(5)
+
+
+def _cover_resource_ids(song_id: Any) -> tuple[str, ...]:
+    try:
+        sid = int(song_id)
+    except (TypeError, ValueError):
+        sid = 0
+    base = sid % 10000
+    return (
+        str(sid),
+        str(base),
+        str(base).zfill(4),
+        str(base).zfill(5),
+        _df_cover_id(song_id),
+    )
+
+
+def _cover_path(assets: Path, sid: str) -> Path | None:
+    for cover_dir in (
+        COVER_ROOT,
+        assets / "mai" / "cover",
+        assets / "cover",
+        ASSETS_ROOT / "mai" / "cover",
+        ASSETS_ROOT / "cover",
+    ):
+        for name in _cover_resource_ids(sid):
+            for suffix in (".png", ".jpg", ".jpeg", ".webp"):
+                candidate = cover_dir / f"{name}{suffix}"
+                if candidate.is_file():
+                    return candidate
+    return None
 
 
 def _cover_urls(song_id: Any) -> tuple[str, ...]:
@@ -270,24 +337,71 @@ def _cover_urls(song_id: Any) -> tuple[str, ...]:
         sid = int(song_id)
     except (TypeError, ValueError):
         sid = 0
+    lxns_resource_id = sid % 10000
     return (
-        f"https://assets.lxns.net/maimai/jacket/{sid}.png!webp",
-        f"https://assets.lxns.net/maimai/jacket/{sid % 10000}.png!webp",
-        f"https://www.diving-fish.com/covers/{sid:05d}.png",
+        f"https://assets.lxns.net/maimai/jacket/{lxns_resource_id}.png!webp",
+        f"https://assets2.lxns.net/maimai/jacket/{lxns_resource_id}.png",
+        f"https://www.diving-fish.com/covers/{_df_cover_id(song_id)}.png",
     )
 
 
-def _load_covers(sd: list[dict], dx: list[dict]) -> dict[str, Image.Image]:
+def _record_cover_key(item: dict) -> str:
+    return str(
+        item.get("df_song_id")
+        or item.get("music_id")
+        or item.get("song_id")
+        or item.get("id")
+        or ""
+    )
+
+
+async def _prefetch_cover_data_urls(
+    sd: list[dict],
+    dx: list[dict],
+    cover_fetcher: Optional[Callable[[str], Awaitable[Optional[str]]]],
+) -> dict[str, str]:
+    if cover_fetcher is None:
+        return {}
+    keys = []
+    for item in (*sd, *dx):
+        sid = _record_cover_key(item)
+        if sid and sid not in keys:
+            keys.append(sid)
+    results = await asyncio.gather(
+        *(cover_fetcher(sid) for sid in keys),
+        return_exceptions=True,
+    )
+    return {
+        sid: data_url
+        for sid, data_url in zip(keys, results)
+        if isinstance(data_url, str) and data_url
+    }
+
+
+async def _empty_data_url() -> str:
+    return ""
+
+
+def _load_covers(
+    sd: list[dict],
+    dx: list[dict],
+    cover_data_urls: dict[str, str] | None = None,
+) -> dict[str, Image.Image]:
     result: dict[str, Image.Image] = {}
     missing: list[str] = []
+    cover_data_urls = cover_data_urls or {}
     for item in (*sd, *dx):
-        sid = str(item.get("df_song_id") or item.get("song_id") or "")
+        sid = _record_cover_key(item)
         if sid and sid in result:
             continue
         if not sid:
             continue
-        local = COVER_ROOT / f"{sid}.png"
-        if local.is_file():
+        image = _image_from_data_url(cover_data_urls.get(sid, ""))
+        if image is not None:
+            result[sid] = image
+            continue
+        local = _cover_path(ASSETS_ROOT, sid)
+        if local:
             image = _open(local)
             result[sid] = image
         else:
@@ -319,8 +433,8 @@ def _remote_cover(sid: str) -> Image.Image | None:
     )
 
 
-def _load_avatar(url: str) -> Image.Image | None:
-    return _fetch_image(url)
+def _load_avatar(url: str, avatar_data_url: str = "") -> Image.Image | None:
+    return _image_from_data_url(avatar_data_url) or _fetch_image(url)
 
 
 class AWMCRenderer:
@@ -455,7 +569,7 @@ class AWMCRenderer:
     def _card(self, chart: dict, x: int, y: int) -> None:
         index = max(0, min(_i(chart.get("level_index"), 3), 4))
         self.image.alpha_composite(self.cards[index], (x, y))
-        sid = str(chart.get("df_song_id") or chart.get("music_id") or chart.get("song_id") or "")
+        sid = _record_cover_key(chart)
         cover = self.covers.get(sid) or _placeholder_cover((75, 75))
         self.image.alpha_composite(cover.resize((75, 75)), (x + 12, y + 12))
 
@@ -574,13 +688,24 @@ async def render_b50(
     course_rank: Any = None,
     class_rank: Any = None,
     source: str = "",
+    cover_fetcher: Optional[Callable[[str], Awaitable[Optional[str]]]] = None,
+    avatar_fetcher: Optional[Callable[[str], Awaitable[Optional[str]]]] = None,
 ) -> str:
     """使用 AWMC/Yuzu 原始贴图渲染 B50。"""
+    del renderer
     sd = charts.get("sd") or []
     dx = charts.get("dx") or []
+    cover_data_urls, avatar_data_url = await asyncio.gather(
+        _prefetch_cover_data_urls(sd, dx, cover_fetcher),
+        (
+            avatar_fetcher(avatar_url)
+            if avatar_fetcher and avatar_url
+            else _empty_data_url()
+        ),
+    )
     covers, avatar = await asyncio.gather(
-        asyncio.to_thread(_load_covers, sd, dx),
-        asyncio.to_thread(_load_avatar, avatar_url),
+        asyncio.to_thread(_load_covers, sd, dx, cover_data_urls),
+        asyncio.to_thread(_load_avatar, avatar_url, avatar_data_url),
     )
     context = _build_context(
         charts, username, nickname, rating, course_rank, class_rank, source

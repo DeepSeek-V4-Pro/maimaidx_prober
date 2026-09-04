@@ -6,13 +6,13 @@
 collections / comment）以及绑定管理（bind / unbind / status）。
 """
 
-import asyncio
-import html as _html
-import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from maibot_sdk import Command
+import asyncio
+import html as _html
+import logging
 
 from ..clients.lxns import LxnsApiClient
 from ..renderers import (
@@ -243,6 +243,12 @@ class LxnsCommandsMixin(SharedHelpersMixin):
                 course_rank=data.get("course_rank"),
                 class_rank=data.get("class_rank"),
                 source=data.get("source", ""),
+                cover_fetcher=(
+                    self._covers.get_cover_data_url if self._covers else None
+                ),
+                avatar_fetcher=(
+                    self._covers.get_image_data_url if self._covers else None
+                ),
             ),
             "AP50 图片生成失败",
         )
