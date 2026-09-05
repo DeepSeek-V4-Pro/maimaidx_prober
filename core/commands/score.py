@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """成绩查询命令（v2.0 起统一为 /mai 前缀）。"""
 
-import html as _html
-import logging
 from typing import Any
 
 from maibot_sdk import Command
+import html as _html
+import logging
 
 from ..renderers import render_b50, render_my, render_plate
 from ..util import error_msg, is_error
@@ -64,6 +64,12 @@ class ScoreCommandsMixin(SharedHelpersMixin):
                 course_rank=data.get("course_rank"),
                 class_rank=data.get("class_rank"),
                 source=data.get("source", ""),
+                cover_fetcher=(
+                    self._covers.get_cover_data_url if self._covers else None
+                ),
+                avatar_fetcher=(
+                    self._covers.get_image_data_url if self._covers else None
+                ),
             ),
             "B50 图片生成失败",
         )
