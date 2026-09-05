@@ -2,6 +2,20 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.3.1] - 2026-09-05
+
+> v3.3.1 修复 B50/AP50 曲绘加载，统一复用封面服务。
+
+### 修复
+
+- `/mai b50` / `/mai lxns ap50` 的曲绘与头像加载改为复用 `CoverService`
+  （`get_cover_data_url` / `get_image_data_url`），通过魔数校验、双源回退与
+  缓存避免 CDN 返回非图片内容时大量显示占位图；
+- 补全水鱼/落雪曲目 ID 归一化（10001–11000 偏移）与本地曲绘文件名候选
+  （`sid` / `base` / 补零 / 水鱼 ID），缺失时依次回退 `assets2.lxns.net`
+  与水鱼曲库；
+- `config_version` 同步至 `3.3.1`（`config.toml` / `core/config.py` / README 示例）。
+
 ## [3.3.0] - 2026-09-03
 
 > v3.3 完成信息卡 AWMC 化、帮助页拆分与双源细节打磨。
@@ -268,4 +282,5 @@
 [1.1.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v1.1.0
 [1.0.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v1.0.0
 [3.2.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.2.0
+[3.3.1]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.3.1
 [3.3.0]: https://github.com/DeepSeek-V4-Pro/maimaidx_prober/releases/tag/v3.3.0
