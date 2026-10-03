@@ -11,7 +11,7 @@ class PluginSectionConfig(PluginConfigBase):
     __ui_icon__ = "package"
     __ui_order__ = 0
     enabled: bool = Field(default=True, description="是否启用插件")
-    config_version: str = Field(default="3.3.1", description="配置版本")
+    config_version: str = Field(default="3.3.2", description="配置版本")
     auto_install_deps: bool = Field(
         default=False,
         description="依赖缺失时自动执行 pip 安装（默认关闭，建议手动执行 install_deps.py）",
@@ -38,7 +38,7 @@ class ServerConfig(PluginConfigBase):
     music_cache_ttl: int = Field(default=300, description="曲库缓存时间(秒)")
     developer_token: str = Field(
         default="",
-        description="水鱼旧版开发者 API 密钥（仅作 /mai plate 回退；2026-10-01 起停止服务）",
+        description="水鱼旧版开发者 API 密钥（仅作 /mai plate 回退；可用性以水鱼服务端为准，优先 OAuth）",
     )
     enable_oauth: bool = Field(
         default=False,

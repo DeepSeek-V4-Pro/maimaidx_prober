@@ -242,7 +242,7 @@ class PlayerQueryService:
                 continue
             if not lid:
                 continue
-            df_song = await self._music.get_df_song_by_lxns_id(lid)
+            df_song = await self._music.get_df_song_by_lxns_id(lid, item.get("type", ""))
             if not df_song:
                 continue
             item["df_song_id"] = df_song.get("id")
@@ -590,7 +590,7 @@ class PlayerQueryService:
                     item["level_index"] = level_index
                     item["level_name"] = DIFF_NAMES[level_index] if 0 <= level_index < 5 else str(level_index)
                     merged.append(item)
-        merged.sort(key=lambda x: str(x.get("play_time") or ""), reverse=True)
+        merged.sort(key=lambda x: str(x.get("upload_time") or ""), reverse=True)
         return True, {
             "song_id": sid,
             "title": title,
@@ -799,6 +799,9 @@ class PlayerQueryService:
 
         mapped: list[dict] = []
         skipped = 0
+        songs = await self._music.get_songs() or []
+        songs_by_id = {str(m.get("id")): m for m in songs if isinstance(m, dict)}
+        await self._music._get_lxns_cache()
         for r in records:
             if not isinstance(r, dict):
                 skipped += 1
@@ -808,7 +811,13 @@ class PlayerQueryService:
             except (TypeError, ValueError):
                 skipped += 1
                 continue
-            lxns_song, err = await self._music.find_lxns_song(str(sid))
+            df_song = songs_by_id.get(str(sid))
+            if not df_song or str(r.get("type", "")) != df_song.get("type"):
+                skipped += 1
+                continue
+            lxns_song = self._music._lxns_by_id.get(sid % 10000)
+            if lxns_song and str(lxns_song.get("title", "")).strip() != str(df_song.get("title", "")).strip():
+                lxns_song = None
             if not lxns_song:
                 skipped += 1
                 continue
@@ -823,6 +832,15 @@ class PlayerQueryService:
                 else "dx" if df_type == "DX"
                 else df_type or "standard"
             )
+            li = r.get("level_index")
+            if (
+                lxns_type not in ("standard", "dx")
+                or not isinstance(li, int) or isinstance(li, bool)
+                or not 0 <= li < len(df_song.get("ds") or [])
+                or r.get("achievements") in (None, "")
+            ):
+                skipped += 1
+                continue
             mapped.append({
                 "id": lxns_id,
                 "song_name": str(lxns_song.get("title") or r.get("title") or ""),
@@ -838,14 +856,14 @@ class PlayerQueryService:
             })
         return mapped, skipped, []
 
-    async def upload_df_to_lxns(self, user_id: str) -> tuple[bool, dict, str]:
+    async def upload_df_to_lxns(self, user_id: str, dry_run: bool = False) -> tuple[bool, dict, str]:
         """把水鱼成绩同步上传到落雪个人账号。
 
         需要水鱼绑定（数据源）+ 落雪绑定（上传目标，个人 token / OAuth）。
-        水鱼无公开上传接口，本功能为单向同步（水鱼 → 落雪）。
+        反向同步由 upload_lxns_to_df 提供。
         """
 
-        df_binding = await self._bindings.get(user_id)
+        df_binding = await self._bindings.get(user_id) or {}
         lxns_auth, err = await self._auth_svc.get_auth(user_id)
         if not lxns_auth:
             return False, {}, f"未绑定落雪账号（上传目标）：{err}"
@@ -871,8 +889,12 @@ class PlayerQueryService:
         # 保留最高成绩策略：缺失补齐；水鱼更高则覆盖（并保留落雪已有 play_time，
         # 因为水鱼记录不含 play_time）；相同或更低则跳过（成绩不倒退）。
         existing = await self._lxns.get_user_scores(lxns_auth)
+        if is_error(existing):
+            return False, {}, f"获取目标成绩失败，已停止同步: {error_msg(existing)}"
+        if not isinstance(existing.get("data"), list):
+            return False, {}, "目标成绩响应格式异常，已停止同步"
         existing_by_key: dict[tuple, dict] = {}
-        if not is_error(existing) and isinstance(existing.get("data"), list):
+        if isinstance(existing.get("data"), list):
             for s in existing["data"]:
                 if isinstance(s, dict):
                     existing_by_key[(s.get("id"), s.get("level_index"), s.get("type"))] = s
@@ -904,7 +926,7 @@ class PlayerQueryService:
 
         uploaded = 0
         chunk_size = 100
-        for i in range(0, len(to_upload), chunk_size):
+        for i in range(0, 0 if dry_run else len(to_upload), chunk_size):
             part = to_upload[i:i + chunk_size]
             resp2 = await self._lxns.upload_user_scores(lxns_auth, part)
             if is_error(resp2):
@@ -919,6 +941,8 @@ class PlayerQueryService:
             "upgraded": upgraded_count,
             "unchanged": unchanged_count,
             "uploaded": uploaded,
+            "planned": len(to_upload),
+            "dry_run": dry_run,
             "skipped": skipped,
             "errors": errors,
         }, ""
@@ -936,7 +960,7 @@ class PlayerQueryService:
         ``dry_run=True`` 时只做映射与差异统计，不实际写入。
         """
 
-        df_binding = await self._bindings.get(user_id)
+        df_binding = await self._bindings.get(user_id) or {}
         df_auth = None
         if self._df_oauth is not None:
             df_auth, _ = await self._df_oauth.get_auth(user_id)
@@ -962,7 +986,7 @@ class PlayerQueryService:
                 skipped += 1
                 continue
             # 宴会场难度映射不可靠且水鱼端 RA 语义不同，跳过
-            if str(s.get("type", "")).strip().lower() == "utage":
+            if s.get("type") not in ("standard", "dx"):
                 skipped += 1
                 continue
             # 无达成率的记录上传到水鱼会被当作 0 分创建，跳过
@@ -974,12 +998,12 @@ class PlayerQueryService:
             except (TypeError, ValueError):
                 skipped += 1
                 continue
-            df_song = await self._music.get_df_song_by_lxns_id(lid)
+            df_song = await self._music.get_df_song_by_lxns_id(lid, str(s.get("type", "")))
             if not df_song:
                 skipped += 1
                 continue
             li = s.get("level_index")
-            if not isinstance(li, int) or li < 0:
+            if not isinstance(li, int) or isinstance(li, bool) or not 0 <= li < len(df_song.get("ds") or []):
                 skipped += 1
                 continue
             mapped.append({
@@ -999,8 +1023,12 @@ class PlayerQueryService:
             import_token if not df_auth else "",
             auth=df_auth if df_auth else None,
         )
+        if is_error(existing):
+            return False, {}, f"获取目标成绩失败，已停止同步: {error_msg(existing)}"
+        if not isinstance(existing.get("records"), list):
+            return False, {}, "目标成绩响应格式异常，已停止同步"
         existing_by_key: dict[tuple, dict] = {}
-        if not is_error(existing) and isinstance(existing.get("records"), list):
+        if isinstance(existing.get("records"), list):
             for r in existing["records"]:
                 if isinstance(r, dict):
                     existing_by_key[(
@@ -1142,6 +1170,10 @@ class PlayerQueryService:
             return False, {}, err
         sid = int(lxns_song["id"])
         target_fc = (target_fc or "").strip()
+        song_types = [t for t in ("standard", "dx", "utage")
+                      if (lxns_song.get("difficulties") or {}).get(t)]
+        if not song_types:
+            return False, {}, "曲库没有可查询的谱面"
         if target_fc:
             if not _is_friend_code(target_fc):
                 return False, {}, "好友码格式不正确（应为 12 位以上数字）"
@@ -1149,57 +1181,67 @@ class PlayerQueryService:
                 return False, {}, _DEV_PERMISSION_MSG
             dev_auth = self._auth_svc.developer_auth()
             if not dev_auth:
-                return False, {}, (
-                    "好友码查询需要管理员配置 [lxns].enable_developer_api "
-                    "与 developer_api_key"
-                )
-            resp = await self._lxns.get_player_bests(int(target_fc), dev_auth)
+                return False, {}, "好友码查询需要管理员配置落雪开发者密钥"
+            responses = await asyncio.gather(*(
+                self._lxns.get_player_bests(int(target_fc), dev_auth, song_id=sid, song_type=t)
+                for t in song_types
+            ))
         else:
             auth, aerr = await self._resolve_lxns(user_id)
             if not auth:
                 return False, {}, aerr
-            resp = await self._lxns.get_user_bests(auth)
-        if is_error(resp):
-            return False, {}, error_msg(resp)
-        charts = normalize_lxns_bests(resp.get("data"))
-        await self._enrich_with_df(charts.get("sd", []) + charts.get("dx", []))
+            responses = await asyncio.gather(*(
+                self._lxns.get_user_bests(auth, song_id=sid, song_type=t)
+                for t in song_types
+            ))
+        raw_scores = []
+        for resp in responses:
+            if is_error(resp):
+                return False, {}, error_msg(resp)
+            if not isinstance(resp.get("data"), list):
+                return False, {}, "单曲成绩响应格式异常"
+            raw_scores.extend(resp["data"])
+        records = [item for rec in raw_scores if (item := normalize_lxns_score(rec))]
+        await self._enrich_with_df(records)
         df_song = await self._music.get_df_song_by_lxns_id(sid)
         song_for_render = dict(lxns_song)
+        chart_songs = {}
+        for chart_type in ("SD", "DX"):
+            df_chart_song = await self._music.get_df_song_by_lxns_id(sid, chart_type)
+            if df_chart_song:
+                chart_songs[chart_type] = df_chart_song
+        song_for_render["chart_songs"] = chart_songs
         if df_song:
-            song_for_render["basic_info"] = dict(df_song.get("basic_info") or {})
-            song_for_render["level"] = df_song.get("level") or []
-            song_for_render["ds"] = df_song.get("ds") or []
-            song_for_render["charts"] = df_song.get("charts") or []
+            song_for_render.update(df_song)
         rows: list[dict] = []
-        for section, is_dx in (("sd", False), ("dx", True)):
-            for rec in charts.get(section, []):
-                try:
-                    rec_sid = int(rec.get("song_id") or 0)
-                except (TypeError, ValueError):
-                    rec_sid = 0
-                if rec_sid != sid:
-                    continue
-                try:
-                    li = int(rec.get("level_index", 0))
-                except (TypeError, ValueError):
-                    li = -1
-                rows.append({
-                    "music_id": sid,
-                    "level_index": li,
-                    "level_name": DIFF_NAMES[li] if 0 <= li < 5 else str(rec.get("level_index", "?")),
-                    "type": "DX" if is_dx else "SD",
-                    "achievements": rec.get("achievements"),
-                    "achievement": rec.get("achievements"),
-                    "dx_score": rec.get("dx_score"),
-                    "dxScore": rec.get("dx_score"),
-                    "ra": rec.get("ra", 0),
-                    "rate": rec.get("rate", ""),
-                    "fc": rec.get("fc", ""),
-                    "fs": rec.get("fs", ""),
-                    "upload_time": _fmt_utc(
-                        rec.get("play_time") or rec.get("last_played_time")
-                    ),
-                })
+        for rec in records:
+            try:
+                rec_sid = int(rec.get("song_id") or 0)
+            except (TypeError, ValueError):
+                rec_sid = 0
+            if rec_sid != sid:
+                continue
+            try:
+                li = int(rec.get("level_index", 0))
+            except (TypeError, ValueError):
+                li = -1
+            rows.append({
+                "music_id": sid,
+                "level_index": li,
+                "level_name": DIFF_NAMES[li] if 0 <= li < 5 else str(rec.get("level_index", "?")),
+                "type": rec.get("type", ""),
+                "achievements": rec.get("achievements"),
+                "achievement": rec.get("achievements"),
+                "dx_score": rec.get("dx_score"),
+                "dxScore": rec.get("dx_score"),
+                "ra": rec.get("ra", 0),
+                "rate": rec.get("rate", ""),
+                "fc": rec.get("fc", ""),
+                "fs": rec.get("fs", ""),
+                "upload_time": _fmt_utc(
+                    rec.get("upload_time")
+                ),
+            })
         return True, {
             "song_id": sid,
             "title": str(lxns_song.get("title", "")),

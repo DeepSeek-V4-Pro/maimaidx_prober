@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""单曲游玩历史渲染（落雪，浅色面板风格）。"""
+"""单曲成绩上传历史渲染（落雪，浅色面板风格）。"""
 
 import html as _html
 
@@ -16,7 +16,7 @@ async def render_history(
 ) -> str:
     rows = []
     for h in history[:20]:
-        time_str = fmt_utc(h.get("play_time"))
+        time_str = fmt_utc(h.get("upload_time"))
         ach = h.get("achievements")
         ach_str = f"{safe_float(ach):.4f}%" if ach is not None else "-"
         rate = safe_str(h.get("rate"), "-")
@@ -42,9 +42,9 @@ async def render_history(
     )
     body = (
         '<div class="panel">'
-        f'<div class="p-title">游玩历史</div>'
+        f'<div class="p-title">成绩上传历史</div>'
         f'<div class="p-sub">{_html.escape(safe_str(title, "?"))}（{len(history[:20])} 条）</div>'
-        '<table class="table"><tr><th>难度</th><th>达成率</th><th>评级</th><th>FC</th><th>时间</th></tr>'
+        '<table class="table"><tr><th>难度</th><th>达成率</th><th>评级</th><th>FC</th><th>上传时间</th></tr>'
         + "".join(rows)
         + "</table>"
         '<div class="p-footer">'

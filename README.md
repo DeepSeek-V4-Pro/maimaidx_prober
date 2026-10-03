@@ -1,4 +1,4 @@
-# MaiMai DX 查分器插件（v3.3.1）· 用户文档
+# MaiMai DX 查分器插件（v3.3.2）· 用户文档
 
 > 面向**插件使用者**（MaiBot 服主 / 群友）的安装、配置与命令说明。
 > 开发者请阅读 [DEVELOPMENT.md](DEVELOPMENT.md)。
@@ -8,7 +8,7 @@
 B50 成绩图、个人成绩、曲目搜索、猜歌、谱面统计、今日运势、热门/排行，以及落雪独有
 的热力图、趋势、历史、排行、年度回顾、收藏品、双向成绩同步等能力。
 
-> **插件版本**: 3.3.1 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
+> **插件版本**: 3.3.2 | **插件 ID**: `deepseek-v4-pro.maimaidx-prober`
 > **水鱼 API**: <https://www.diving-fish.com/api/maimaidxprober>
 > **lxns API**: <https://maimai.lxns.net/api/v0>
 
@@ -101,7 +101,7 @@ python install_deps.py
 ```toml
 [plugin]
 enabled = true               # 是否启用插件
-config_version = "3.3.1"     # 配置版本（请勿手动修改）
+config_version = "3.3.2"     # 配置版本（请勿手动修改）
 auto_install_deps = false    # 依赖缺失时自动安装
 game_version = 25500         # 落雪趋势接口默认版本（25500=舞萌DX 2026）
 developer_qq = []            # 允许使用开发者凭证的 QQ 号列表；为空则关闭全部开发者功能
@@ -110,7 +110,7 @@ developer_qq = []            # 允许使用开发者凭证的 QQ 号列表；为
 base_url = "https://www.diving-fish.com/api/maimaidxprober"
 request_timeout = 30
 music_cache_ttl = 300
-developer_token = ""         # 旧版水鱼开发者 API 密钥（/mai plate 回退；2026-10-01 起停止服务）
+developer_token = ""         # 旧版水鱼开发者 API 密钥（/mai plate 回退；可用性以水鱼服务端为准，优先 OAuth）
 enable_oauth = true          # 是否启用水鱼 OAuth（公开客户端设备码绑定）
 oauth_issuer = "https://auth.diving-fish.com"
 oauth_client_id = "4e9a24a7180a22ce5fbb93237d245a74"  # 公开客户端 client_id（可随模板分发）
@@ -230,7 +230,7 @@ no_sandbox = true
 | `/mai df upload` | 落雪成绩同步到水鱼（反向，只升不降） | 文本 |
 
 > 水鱼 OAuth 查询对象由授权令牌决定，无需再传用户名。旧 Developer-Token 回退与
-> 水鱼官方迁移同步停止：2026-10-01 00:00（UTC+8）后不再可用。
+> 旧版回退是否可用以水鱼服务端为准，建议迁移到 OAuth。
 
 ### 落雪命令（`/mai lxns help`）
 
@@ -252,7 +252,7 @@ no_sandbox = true
 | `/mai my --lxns` | 强制使用落雪个人成绩摘要 | 图片 |
 | `/mai lxns heatmap` | 成绩上传热力图 | 图片 |
 | `/mai lxns trend [版本号]` | DX Rating 趋势 | 图片 |
-| `/mai lxns history <曲名/ID>` | 单曲游玩历史（遍历全部难度） | 图片 |
+| `/mai lxns history <曲名/ID>` | 单曲成绩上传历史（遍历全部难度） | 图片 |
 | `/mai lxns rank <曲名/ID>` | 单曲分数排行 | 图片 |
 | `/mai lxns year [年份]` | 年度回顾（评级/FC/难度/常玩/Rating 成长） | 图片 |
 | `/mai lxns collections` | 收藏品（称号/头像/姓名框/背景实物图） | 图片 |
@@ -355,7 +355,7 @@ no_sandbox = true
 | 落雪个人 API 密钥 | `lxns_bindings.json` | 读取 / 上传落雪成绩 | 落雪「账号详情页」重新生成 |
 | 落雪 OAuth 令牌（access / refresh） | `lxns_bindings.json` | 以账号身份访问落雪 | 落雪「已授权应用」撤销授权 |
 | 落雪开发者密钥（全局） | `config.toml` | 好友码 / AP50 / 按 QQ 查询 | 落雪开发者面板重置 |
-| 水鱼 Developer-Token（全局） | `config.toml` | `/mai plate` 旧版回退（2026-10-01 停止服务） | 水鱼开发者面板重置，或改用 OAuth |
+| 水鱼 Developer-Token（全局） | `config.toml` | `/mai plate` 旧版回退（旧版接口，优先 OAuth） | 水鱼开发者面板重置，或改用 OAuth |
 
 安全要点：
 
@@ -396,7 +396,16 @@ no_sandbox = true
 
 ---
 
-**插件版本**: 3.3.1
+**插件版本**: 3.3.2
 **插件 ID**: `deepseek-v4-pro.maimaidx-prober`  
 **更新日志**: [CHANGELOG.md](CHANGELOG.md)  
 **开发者文档**: [DEVELOPMENT.md](DEVELOPMENT.md)
+
+### 3.3.2 同步与显示说明
+
+- 难度标签使用统一 RGBA 背景色，文字为白色并带深色描边或阴影。
+
+- 双源同步按曲目 ID、SD/DX 类型和难度定位，宴会场和无法可靠映射的成绩跳过。读取目标成绩失败时停止同步。
+- 单曲最佳查询全部已记录难度；同曲同时存在标准谱和 DX 谱时分别显示信息卡。
+- `/mai lxns history` 展示成绩上传历史与上传时间，包含缺少实际游玩时间的更新。
+- 本版本防止后续串谱，不自动删除或回滚已误同步的历史成绩。

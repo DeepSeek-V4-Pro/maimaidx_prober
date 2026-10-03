@@ -7,6 +7,14 @@ RATE_DISPLAY: dict[str, str] = {
     "s": "S", "sp": "S+", "ss": "SS", "ssp": "SS+",
     "sss": "SSS", "sssp": "SSS+",
 }
+DIFF_RGBA = (
+    (132, 220, 84, 255),
+    (244, 188, 20, 255),
+    (252, 132, 140, 255),
+    (156, 84, 220, 255),
+    (190, 130, 248, 255),
+)
+
 DIFF_NAMES = ["Basic", "Advanced", "Expert", "Master", "Re:Master"]
 
 BASE_HTML_STYLE = (

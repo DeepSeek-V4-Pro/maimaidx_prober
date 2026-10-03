@@ -6,6 +6,7 @@
 """
 
 import asyncio
+import base64
 import json
 import os
 import sys
@@ -19,6 +20,7 @@ import pydantic
 # 本脚本不内置任何真实账号或本机路径：运行时通过环境变量注入，
 # 请勿把 QQ 号 / 密钥 / 本机路径写进本文件。
 ROOT = Path(os.environ.get("MAIBOT_PLUGIN_ROOT", ""))
+CONFIG_ROOT = Path(os.environ.get("MAIBOT_CONFIG_ROOT", str(ROOT)))
 ONKEY_SP = Path(os.environ.get("MAIBOT_PYTHON_SP", ""))
 DATA = Path(os.environ.get("MAIBOT_PLUGIN_DATA", ""))
 QQ = os.environ.get("MAIBOT_TEST_QQ", "")
@@ -81,7 +83,7 @@ async def expect(name: str, coro, predicate=None):
                 if len(value) >= 3 and isinstance(value[0], bool) and not value[0]:
                     detail = str(value[2])[:160]
                 else:
-                    detail = str(value[1] if len(value) > 1 else "")[:120]
+                    detail = ""
             elif isinstance(value, dict):
                 ok = not value.get("_error", False)
                 detail = str(value.get("message", ""))[:120]
@@ -100,13 +102,17 @@ async def render_check(name: str, coro):
             isinstance(result, str) and len(result) > 10
         )
         record(name, ok, f"html={len(renderer.items)}")
+        if isinstance(result, str) and not renderer.items:
+            png = base64.b64decode(result)
+            if png.startswith(b"\x89PNG"):
+                (OUT_DIR / f"{name}.png").write_bytes(png)
     except Exception as exc:
         record(name, False, f"{type(exc).__name__}: {exc}")
 
 
 async def main():
     missing = []
-    if not (ROOT / "config.toml").is_file():
+    if not (CONFIG_ROOT / "config.toml").is_file():
         missing.append("MAIBOT_PLUGIN_ROOT（需指向 plugins/maimaidx_prober 目录）")
     if not DATA.is_dir():
         missing.append("MAIBOT_PLUGIN_DATA（需指向 data/plugins/<plugin_id> 目录）")
@@ -168,7 +174,7 @@ async def main():
     )
 
     config = MaiMaiDXConfig()
-    raw = tomllib.loads((ROOT / "config.toml").read_text(encoding="utf-8"))
+    raw = tomllib.loads((CONFIG_ROOT / "config.toml").read_text(encoding="utf-8"))
     config.plugin.developer_qq = raw["plugin"].get("developer_qq", [])
     config.server.base_url = raw["server"]["base_url"]
     config.server.request_timeout = raw["server"]["request_timeout"]
@@ -249,6 +255,7 @@ async def main():
         df_auth, df_auth_err = await df_oauth.get_auth(QQ)
         record("df_oauth_get_auth", bool(df_auth), df_auth_err)
         df_auth = df_auth or {}
+        df_binding = await bindings.get(QQ) or {}
 
         await expect(
             "df_oauth_status",
@@ -257,7 +264,7 @@ async def main():
         )
         await expect(
             "df_player_records",
-            lambda: df_client.get_player_records(auth=df_auth),
+            lambda: df_client.get_player_records(str(df_binding.get("import_token", "")), auth=df_auth),
             lambda x: isinstance(x, dict) and not x.get("_error") and len(x.get("records", [])) > 0,
         )
         await expect(
@@ -398,6 +405,10 @@ async def main():
             lambda x: x[0],
         )
         best_data = await players.get_lxns_best(QQ, "QZKago Requiem")
+        if best_data[0]:
+            best_png = await render_play_info(best_data[1]["song"], best_data[1]["rows"], "落雪", cover or "")
+            (OUT_DIR / "single_song_best.png").write_bytes(base64.b64decode(best_png))
+            record("render_real_single_song_best", bool(best_png))
         binding = await lxns_bindings.get(QQ)
         fc = str((binding or {}).get("friend_code") or "")
         if fc:
@@ -411,6 +422,17 @@ async def main():
         await expect(
             "df_upload_dry_run",
             lambda: players.upload_lxns_to_df(QQ, dry_run=True),
+            lambda x: x[0],
+        )
+
+        await expect(
+            "lxns_upload_dry_run",
+            lambda: players.upload_df_to_lxns(QQ, dry_run=True),
+            lambda x: x[0],
+        )
+        await expect(
+            "lxns_qq_bound_account",
+            lambda: players.get_lxns_player_by_qq(QQ, QQ),
             lambda x: x[0],
         )
 

@@ -21,8 +21,11 @@ import random
 import unicodedata
 import urllib.request
 
+from ..constants import DIFF_RGBA
 from ..services.covers import sniff_mime
 from ..services.renderer import HtmlRenderer
+
+from .difficulty_palette import apply_difficulty_palette
 
 ASSETS_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "awmc_core"
 COVER_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "awmc" / "mai" / "cover"
@@ -61,13 +64,7 @@ FS_MAP = {
     "fsd": "FSD", "fsdp": "FSDp", "fsd+": "FSDp",
     "sync": "Sync",
 }
-ID_COLORS = (
-    (129, 217, 85),
-    (245, 189, 21),
-    (255, 129, 141),
-    (159, 81, 220),
-    (138, 0, 226),
-)
+ID_COLORS = DIFF_RGBA
 
 
 def _f(value: Any, default: float = 0.0) -> float:
@@ -157,6 +154,7 @@ def _dx_star(dx_score: int, maximum: int) -> int:
 def _open(path: Path, size: tuple[int, int] | None = None) -> Image.Image:
     with Image.open(path) as source:
         image = source.convert("RGBA")
+    image = apply_difficulty_palette(image, path.name)
     if size:
         image = image.resize(size, Image.Resampling.LANCZOS)
     return image

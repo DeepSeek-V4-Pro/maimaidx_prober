@@ -318,7 +318,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
 
     @Command(
         "mai_lxns_history",
-        description="查看单曲游玩历史（落雪）",
+        description="查看单曲成绩上传历史（落雪）",
         pattern=r"^/mai lxns history\s+(?P<keyword>.+)\s*$",
     )
     async def handle_lxns_history(
@@ -337,7 +337,7 @@ class LxnsCommandsMixin(SharedHelpersMixin):
         history = data["history"]
         if not history:
             await self.ctx.send.text(
-                f"「{data['title']}」暂无游玩历史记录", stream_id
+                f"「{data['title']}」暂无成绩上传历史记录", stream_id
             )
             return False, "无记录", True
         await self.ctx.send.text("正在生成历史图片，请稍候...", stream_id)

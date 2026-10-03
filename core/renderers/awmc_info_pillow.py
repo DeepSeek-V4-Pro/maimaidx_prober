@@ -19,6 +19,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from ..rating import compute_ra
 
+from .difficulty_palette import apply_difficulty_palette
+
 ASSETS_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "awmc_core"
 COVER_ROOT = Path(__file__).resolve().parent.parent.parent / "assets" / "awmc" / "mai" / "cover"
 
@@ -140,6 +142,7 @@ def _font_path(assets: Path, torus: bool = False) -> Path:
 def _open(path: Path, size: tuple[int, int] | None = None) -> Image.Image:
     with Image.open(path) as source:
         image = source.convert("RGBA")
+    image = apply_difficulty_palette(image, path.name)
     if size:
         image = image.resize(size, Image.Resampling.LANCZOS)
     return image
@@ -476,7 +479,8 @@ def _render_song_info_sync(
         level = levels[index] if index < len(levels) else "-"
         constant = constants[index] if index < len(constants) else "-"
         draw.text(
-            (120, y), f"{level}({constant})", font=torus(21), fill="white", anchor="mm"
+            (120, y), f"{level}({constant})", font=torus(21), fill="white", anchor="mm",
+            stroke_width=1, stroke_fill=(70, 55, 90, 180)
         )
         charter = chart.get("charter") or "-"
         draw.text(
@@ -618,7 +622,8 @@ def _render_play_info_sync(
             (685, 248 + 100 * index),
             f"{ds:.1f}",
             font=torus(20),
-            fill=color,
+            fill=(255, 255, 255, 255),
+            stroke_width=1, stroke_fill=(70, 55, 90, 180),
             anchor="mm",
         )
         record = by_level.get(index)
@@ -730,6 +735,23 @@ async def render_play_info(
 ) -> str:
     """渲染个人单曲游玩信息为 base64 PNG（AWMC play_info 模板）。"""
 
+    chart_songs = song.get("chart_songs") or {}
+    if chart_songs:
+        images = []
+        for chart_type, chart_song in chart_songs.items():
+            chart_records = [r for r in records if r.get("type") == chart_type]
+            if chart_records:
+                images.append(await asyncio.to_thread(
+                    _render_play_info_sync, chart_song, chart_records,
+                    f"{source_label} · {chart_type}", cover_data_url,
+                ))
+        if images:
+            combined = Image.new("RGB", (max(im.width for im in images), sum(im.height for im in images)), "white")
+            offset = 0
+            for image in images:
+                combined.paste(image, (0, offset))
+                offset += image.height
+            return _to_base64(combined)
     image = await asyncio.to_thread(
         _render_play_info_sync, song, records, source_label, cover_data_url
     )

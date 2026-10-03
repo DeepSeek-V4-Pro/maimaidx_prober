@@ -35,7 +35,7 @@ class MusicService:
         self._lxns_song_cache: Optional[dict] = None
         self._lxns_song_cache_time: float = 0.0
         self._lxns_by_id: dict[int, dict] = {}
-        self._df_by_lxns_id: dict[int, dict] = {}
+        self._df_by_lxns_id: dict[tuple[int, str], dict] = {}
 
     def invalidate(self) -> None:
         self._song_cache = None
@@ -56,6 +56,7 @@ class MusicService:
         resp = await self._df.get_music_data()
         if isinstance(resp, list):
             self._song_cache = resp
+            self._df_by_lxns_id = {}
             self._song_cache_time = now
             return resp
         if isinstance(resp, dict) and resp.get("_not_modified"):
@@ -204,11 +205,7 @@ class MusicService:
                     continue
 
     def _rebuild_df_by_lxns_index(self, songs: list[dict]) -> None:
-        """构建 落雪歌曲 ID → 水鱼歌曲 的反向索引。
-
-        两个查分器 ID 体系：老曲 lxns id == 水鱼 id，新曲 lxns id == 水鱼 id − 10000。
-        """
-
+        """按歌曲 ID 与谱面类型建立索引，标准谱与 DX 谱不能共用键。"""
         self._df_by_lxns_id = {}
         for music in songs:
             if not isinstance(music, dict):
@@ -217,24 +214,26 @@ class MusicService:
                 sid = int(music.get("id", 0))
             except (TypeError, ValueError):
                 continue
-            if not sid:
+            chart_type = str(music.get("type", ""))
+            if not 0 < sid < 100000 or chart_type not in ("SD", "DX"):
                 continue
-            # 老曲：lxns id == 水鱼 id
-            self._df_by_lxns_id[sid] = music
-            # 新曲：lxns id == 水鱼 id − 10000
-            alt = sid - 10000
-            if alt > 0:
-                self._df_by_lxns_id.setdefault(alt, music)
+            lid = sid % 10000
+            self._df_by_lxns_id[(lid, chart_type)] = music
 
-    async def get_df_song_by_lxns_id(self, lxns_id: int) -> Optional[dict]:
-        """按落雪歌曲 ID 反查水鱼曲目（用于补定数、封面 ID、成绩上传映射）。"""
-
+    async def get_df_song_by_lxns_id(
+        self, lxns_id: int, song_type: str = "",
+    ) -> Optional[dict]:
+        """反查指定谱面；未指定类型时仅在唯一匹配时返回，避免串谱。"""
+        songs = await self.get_songs()
+        if not songs:
+            return None
         if not self._df_by_lxns_id:
-            songs = self._song_cache or await self.get_songs()
-            if not songs:
-                return None
             self._rebuild_df_by_lxns_index(songs)
-        return self._df_by_lxns_id.get(int(lxns_id))
+        chart_type = {"standard": "SD", "dx": "DX"}.get(song_type, song_type)
+        if chart_type:
+            return self._df_by_lxns_id.get((int(lxns_id), chart_type))
+        matches = [m for (sid, _), m in self._df_by_lxns_id.items() if sid == int(lxns_id)]
+        return matches[0] if len(matches) == 1 else None
 
     def _find_lxns_song(self, song_id: int, title: Any) -> Optional[dict]:
         """按水鱼歌曲 ID 在 lxns 曲库中匹配对应歌曲。

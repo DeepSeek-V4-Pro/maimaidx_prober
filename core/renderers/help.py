@@ -70,7 +70,7 @@ async def render_help(renderer: HtmlRenderer) -> str:
          ]),
     ]
     note = (
-        "数据源自动选择顺序：已绑定落雪 → 落雪；开发者好友码 → 落雪；否则 → 水鱼。"
+        "数据源自动选择顺序：强制来源优先；好友码 → 开发者落雪；已绑定落雪 → 落雪；否则 → 水鱼。"
         "需要固定来源时可使用 --lxns / --df。"
     )
     return await _render_command_help(
@@ -111,7 +111,7 @@ async def render_df_help(renderer: HtmlRenderer) -> str:
     ]
     note = (
         "水鱼 OAuth 查询对象由授权令牌决定，无需再传用户名。"
-        "旧 Developer-Token 回退将与水鱼官方迁移同步停止（2026-10-01 起不再可用）。"
+        "旧 Developer-Token 回退可用性以水鱼服务端为准，建议使用 OAuth。"
     )
     return await _render_command_help(
         renderer,
@@ -148,7 +148,7 @@ async def render_lxns_help(renderer: HtmlRenderer) -> str:
          [
              ("/mai lxns heatmap", "成绩上传热力图"),
              ("/mai lxns trend [版本号]", "DX Rating 趋势"),
-             ("/mai lxns history <曲名/ID>", "单曲游玩历史"),
+             ("/mai lxns history <曲名/ID>", "单曲成绩上传历史"),
              ("/mai lxns rank <曲名/ID>", "单曲分数排行"),
              ("/mai lxns year [年份]", "年度回顾"),
              ("/mai lxns collections", "收藏品实物图"),

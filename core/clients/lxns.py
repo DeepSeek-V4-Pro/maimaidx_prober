@@ -302,7 +302,7 @@ class LxnsApiClient:
         level_index: int,
         song_type: str,
     ) -> dict:
-        """单曲游玩历史；song_type 为 standard/dx/utage。"""
+        """单曲成绩上传历史；song_type 为 standard/dx/utage。"""
 
         return await self._get(
             "/user/maimai/player/score/history",

@@ -52,11 +52,9 @@ def normalize_lxns_bests(bests: Any) -> dict[str, list[dict]]:
     for rec in bests.get("standard", []) or []:
         item = normalize_lxns_score(rec)
         if item:
-            item["type"] = "SD"
             sd.append(item)
     for rec in bests.get("dx", []) or []:
         item = normalize_lxns_score(rec)
         if item:
-            item["type"] = "DX"
             dx.append(item)
     return {"sd": sd, "dx": dx}
